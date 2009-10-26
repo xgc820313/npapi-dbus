@@ -5,3 +5,6 @@
  * @author jldupont
  */
 
+#include <pthread.h>
+#include "dbus/dbus.h"
+

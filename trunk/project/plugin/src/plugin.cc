@@ -88,8 +88,7 @@ NP_GetValue(void* future, NPPVariable aVariable, void* aValue) {
 }
 
 NP_EXPORT(NPError)
-NP_Shutdown()
-{
+NP_Shutdown() {
   return NPERR_NO_ERROR;
 }
 
