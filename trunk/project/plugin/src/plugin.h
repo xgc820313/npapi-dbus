@@ -11,6 +11,23 @@
    #include "npapi.h"
    #include "npfunctions.h"
 
+   #include <pthread.h>
+   #include "dbus/dbus.h"
+
+
+	// For each plugin instance
+	typedef struct InstanceData {
+	  NPP npp;
+	  NPWindow window;
+	  DBusConnection *conn;
+	  pthread_t egressThread;
+	  pthread_t ingressThread;
+	} InstanceData;
+
+
+	// PROTOTYPES
+	// ==========
+
 	NPError NP_Initialize(NPNetscapeFuncs* bFuncs, NPPluginFuncs* pFuncs);
 	NPError NP_Shutdown();
 
