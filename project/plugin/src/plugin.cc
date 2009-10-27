@@ -7,13 +7,13 @@
  *
  *
  */
+#pragma GCC diagnostic ignored "-Wwrite-strings"
 
 #include <stdlib.h>
 #include <string.h>
 #include <stdio.h>
 
 #include "plugin.h"
-#pragma GCC diagnostic ignored "-Wwrite-strings"
 
 
 #define PLUGIN_NAME        "DBus adapter"
@@ -22,10 +22,6 @@
 
 static NPNetscapeFuncs* sBrowserFuncs = NULL;
 
-typedef struct InstanceData {
-  NPP npp;
-  NPWindow window;
-} InstanceData;
 
 
 static void
@@ -104,6 +100,9 @@ NPP_New(NPMIMEType pluginType, NPP instance, uint16_t mode, int16_t argc, char* 
   memset(instanceData, 0, sizeof(InstanceData));
   instanceData->npp = instance;
   instance->pdata = instanceData;
+
+  //@TODO create ingress thread & queue
+
 
   return NPERR_NO_ERROR;
 }
