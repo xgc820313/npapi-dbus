@@ -16,6 +16,7 @@
 
 #include <pthread.h>
 #include <errno.h>
+#include <assert.h>
 
 #include "queue.h"
 
@@ -115,6 +116,9 @@ void queue_destroy(queue *q) {
  *
   */
 int queue_put(queue *q, void *node) {
+
+	assert(q);
+	assert(node);
 
 	if ((NULL==q) || (NULL==node)) {
 		return 0;
