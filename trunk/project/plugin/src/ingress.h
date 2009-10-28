@@ -14,39 +14,9 @@
 	typedef struct {
 
 		DBusConnection *conn;
-		queue *q;
+		pthread_t *thread;
 
 	} threadParams;
-
-
-	typedef enum {
-		INVALID = 0,
-		DISCONNECTED,
-		UNIQNAME,
-		DBUSMSG
-	} iMsgType;
-
-
-	class BaseMsg {
-
-	public:
-		iMsgType mtype;
-
-		BaseMsg() {
-			mtype=iMsgType.INVALID;
-		}
-
-		virtual ~BaseMsg() {}
-	};
-
-
-	class iMsg: public BaseMsg {
-
-		iMsg();
-		~iMsg();
-
-	};
-
 
 	// PROTOTYPES
 	// ===========
