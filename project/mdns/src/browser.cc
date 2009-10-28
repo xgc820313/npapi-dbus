@@ -186,7 +186,79 @@ __browser_handle_message(DBusMessage *msg, browserParams *bp) {
 	}
 }//
 
+/*
+    <signal name="ItemNew">
+      <arg name="interface" type="i"/>
+      <arg name="protocol"  type="i"/>
+      <arg name="name"      type="s"/>
+      <arg name="type"      type="s"/>
+      <arg name="domain"    type="s"/>
+      <arg name="flags"     type="u"/>
+    </signal>
+
+    <signal name="ItemRemove">
+      <arg name="interface" type="i"/>
+      <arg name="protocol"  type="i"/>
+      <arg name="name"      type="s"/>
+      <arg name="type"      type="s"/>
+      <arg name="domain"    type="s"/>
+      <arg name="flags"     type="u"/>
+    </signal>
+ */
 void
 __browser__process_signal(DBusMessage *msg, browserParams *bp, const char *signalName) {
+
+	int t;
+	DBusMessageIter *iter=(DBusMessageIter *)malloc(sizeof(DBusMessageIter));
+	dbus_int32_t interface, protocol;
+	dbus_uint32_t flags;
+	char *name, *type, *domain;
+
+
+	// Iterate over the DBus message
+	dbus_message_iter_init (msg, iter);
+
+	//interface
+	t = dbus_message_iter_get_arg_type (iter);
+	if (DBUS_TYPE_INT32!=t) {
+
+	}
+	dbus_message_iter_get_basic (iter, &interface);
+
+	//protocol
+	t = dbus_message_iter_get_arg_type (iter);
+	if (DBUS_TYPE_INT32!=t) {
+
+	}
+	dbus_message_iter_get_basic (iter, &protocol);
+
+	//name
+	t = dbus_message_iter_get_arg_type (iter);
+	if (DBUS_TYPE_STRING!=t) {
+
+	}
+	dbus_message_iter_get_basic (iter, &name);
+
+	//type
+	t = dbus_message_iter_get_arg_type (iter);
+	if (DBUS_TYPE_STRING!=t) {
+
+	}
+	dbus_message_iter_get_basic (iter, &type);
+
+	//domain
+	t = dbus_message_iter_get_arg_type (iter);
+	if (DBUS_TYPE_STRING!=t) {
+
+	}
+	dbus_message_iter_get_basic (iter, &domain);
+
+	//flags
+	t = dbus_message_iter_get_arg_type (iter);
+	if (DBUS_TYPE_UINT32!=t) {
+
+	}
+	dbus_message_iter_get_basic (iter, &flags);
+
 
 }//
