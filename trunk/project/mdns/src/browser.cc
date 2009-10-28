@@ -13,6 +13,7 @@
 	DBusHandlerResult __browser_filter_func (DBusConnection *connection, DBusMessage *message, void *user_data);
 	void __browser_handle_message(DBusMessage *msg, browserParams *bp);
 	int __browser_send_request_service_browser_new(DBusConnection *conn);
+	void __browser__process_signal(DBusMessage *msg, browserParams *bp, const char *signalName);
 //}}
 
 
@@ -168,5 +169,24 @@ __browser_filter_func (DBusConnection *connection,
 void
 __browser_handle_message(DBusMessage *msg, browserParams *bp) {
 
+	// we only care about signals
+	if (DBUS_MESSAGE_TYPE_SIGNAL != dbus_message_get_type(message)) {
+		return;
+	}
+
+	// signal name e.g. ItemNew , ItemRemove
+	const char *signalName = dbus_message_get_member(message);
+	if (NULL==signalName) {
+		// paranoia... shouldn't happen
+		return;
+	}
+
+	if ((0==strcmp(signalName, "ItemNew")) || (0==strncmp(signalName, "ItemRemove"))) {
+		__browser__process_signal(msg, bp, signalName);
+	}
 }//
 
+void
+__browser__process_signal(DBusMessage *msg, browserParams *bp, const char *signalName) {
+
+}//
