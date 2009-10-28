@@ -12,7 +12,7 @@
 	void *            __browser_thread_function(void *params);
 	DBusHandlerResult __browser_filter_func (DBusConnection *connection, DBusMessage *message, void *user_data);
 	void __browser_handle_message(DBusMessage *msg, browserParams *bp);
-
+	int __browser_send_request_service_browser_new(DBusConnection *conn);
 //}}
 
 
@@ -21,6 +21,9 @@ BrowserReturnCode browser_init(OUT browserParams **bp) {
 
 	//if this fails, we aint' going far anyway...
 	*bp = (browserParams *) malloc(sizeof(browserParams));
+	if (NULL==*bp) {
+		return BMSG_MALLOC_ERROR;
+	}
 
 	DBusError error;
 	DBusBusType type = DBUS_BUS_SYSTEM;
@@ -36,6 +39,10 @@ BrowserReturnCode browser_init(OUT browserParams **bp) {
 
 	//if this fails, we aint' going far anyway...
 	(*bp)->q=queue_create();
+	if (NULL==*bp) {
+		free(bp);
+		return BMSG_MALLOC_ERROR;
+	}
 
 	pthread_create(&((*bp)->thread), NULL, &__browser_thread_function, (void *) *bp);
 
@@ -44,6 +51,8 @@ BrowserReturnCode browser_init(OUT browserParams **bp) {
 
 void *
 __browser_thread_function(void *vbp) {
+
+	DBusError error;
 
 	//make shortcuts
 	browserParams *bp=(browserParams *) vbp;
@@ -55,7 +64,6 @@ __browser_thread_function(void *vbp) {
 		browser_push_simple_msg( bp, BMsg::BMSG_DBUS_ADDFILTER_ERROR );
 	}
 
-	DBusError error;
 	dbus_bus_add_match(conn, "interface=org.freedesktop.Avahi.ServiceBrowser", &error);
 	if (dbus_error_is_set(&error)) {
 		//@TODO better way to handle this...
@@ -63,6 +71,11 @@ __browser_thread_function(void *vbp) {
 	}
 
 	dbus_error_free(&error);
+
+	if (!__browser_send_request_service_browser_new(conn)) {
+		//@TODO better way to handle this...
+		browser_push_simple_msg( bp, BMsg::BMSG_DBUS_SERVICE_BROWSER_ERROR );
+	}
 
 	while (dbus_connection_read_write_dispatch(conn, 100));
 
@@ -95,15 +108,18 @@ __browser_send_request_service_browser_new(DBusConnection *conn) {
 	 */
 	dbus_int32_t minusOne = -1;
 	dbus_int32_t zero = 0;
+
+	// We must ask Avahi to communicate its results on the DBus
+	// There must be at least 1 browser client on the DBus
 	int result = dbus_message_append_args(
-		msg,
-		DBUS_TYPE_INT32,   &minusOne,
-		DBUS_TYPE_INT32,   &minusOne,
-		DBUS_TYPE_STRING,  "_http._tcp",
-		DBUS_TYPE_STRING,  "local",
-		DBUS_TYPE_UINT32,  &zero,
-		DBUS_TYPE_STRING,  "org.freedesktop.Avahi.ServiceBrowser",
-		DBUS_TYPE_INVALID);
+			msg,
+			DBUS_TYPE_INT32,   &minusOne,
+			DBUS_TYPE_INT32,   &minusOne,
+			DBUS_TYPE_STRING,  "_http._tcp",
+			DBUS_TYPE_STRING,  "local",
+			DBUS_TYPE_UINT32,  &zero,
+			DBUS_TYPE_STRING,  "org.freedesktop.Avahi.ServiceBrowser",
+			DBUS_TYPE_INVALID);
 
 	if (!result) {
 		DBGLOG(LOG_ERR, "browser: error building message");
@@ -116,7 +132,7 @@ __browser_send_request_service_browser_new(DBusConnection *conn) {
 		DBGLOG(LOG_ERR, "browser: error sending message");
 	}
 
-	dbus_message_unref(dm);
+	dbus_message_unref(msg);
 
 	return result;
 }//
