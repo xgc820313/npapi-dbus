@@ -36,12 +36,11 @@ BrowserReturnCode browser_init(OUT browserParams **bp) {
 	}
 
 	DBusError error;
-	DBusBusType type = DBUS_BUS_SYSTEM;
 
 	dbus_error_init (&error);
 
 	DBGMSG("> Attempting DBus connection\n");
-	(*bp)->conn = dbus_bus_get (type, &error);
+	(*bp)->conn = dbus_bus_get (DBUS_BUS_SYSTEM, &error);
 	if (NULL==(*bp)->conn) {
 		DBGMSG("Error: DBus connection\n");
 	  dbus_error_free (&error);
@@ -109,13 +108,14 @@ __browser_thread_function(IN void *vbp) {
 int
 __browser_send_request_service_browser_new(IN DBusConnection *conn) {
 
-	DBusMessage *msg;
+	DBusMessage *msg, *reply;
+	char *path;
 
 	DBGMSG(" > Preparing DBus method call\n");
-	msg=dbus_message_new_method_call("org.freedesktop.Avahi.ServiceBrowser",
-									"/",
-									"org.freedesktop.Avahi.ServiceBrowser",
-									"ServiceBrowserNew");
+	msg=dbus_message_new_method_call("org.freedesktop.Avahi",
+									 "/",
+									 "org.freedesktop.Avahi.Server",
+									 "ServiceBrowserNew");
 	if (NULL==msg)
 		return FALSE;
 
@@ -126,26 +126,28 @@ __browser_send_request_service_browser_new(IN DBusConnection *conn) {
 	 *  <arg name="type"      type="s"  direction="in"/>
 	 *  <arg name="domain"    type="s"  direction="in"/>
 	 *  <arg name="flags"     type="u"  direction="in"/>
+	 *
 	 *  <arg name="path"      type="o"  direction="out"/>
 	 * </method>
 	 */
-	dbus_int32_t minusOne = -1;
-	dbus_uint32_t zero = 0;
+	int32_t interface = -1; //unspecified
+	int32_t protocol  = -1; //unspecified
+	uint32_t zero = 0;
 	const char *sname  = "_http._tcp";
-	const char *domain = "local";
-	const char *path   = "org.freedesktop.Avahi.ServiceBrowser";
+	const char *domain = "";
 
 	DBGMSG(" > Appending arguments to method call\n");
 	// We must ask Avahi to communicate its results on the DBus
-	// There must be at least 1 browser client on the DBus
+	// There must be at least 1 browser client on the DBus or
+	// else Avahi won't generate signals on DBus
 	int result = dbus_message_append_args(
 			msg,
-			DBUS_TYPE_INT32,   &minusOne,
-			DBUS_TYPE_INT32,   &minusOne,
+			DBUS_TYPE_INT32,   &interface,
+			DBUS_TYPE_INT32,   &protocol,
 			DBUS_TYPE_STRING,  &sname,
 			DBUS_TYPE_STRING,  &domain,
 			DBUS_TYPE_UINT32,  &zero,
-			DBUS_TYPE_STRING,  &path,
+			//DBUS_TYPE_STRING,  &path,
 			DBUS_TYPE_INVALID);
 
 	if (!result) {
@@ -153,7 +155,7 @@ __browser_send_request_service_browser_new(IN DBusConnection *conn) {
 		return FALSE;
 	}
 
-	dbus_message_set_destination(msg, "org.freedesktop.Avahi.Server");
+	dbus_message_set_destination(msg, "org.freedesktop.Avahi");
 
 	DBGMSG(" > Sending on DBus\n");
 	result=dbus_connection_send(conn, msg, NULL);
@@ -161,10 +163,12 @@ __browser_send_request_service_browser_new(IN DBusConnection *conn) {
 		DBGLOG(LOG_ERR, "browser: error sending message");
 	}
 
+
 	DBGMSG(" > Releasing message\n");
 	dbus_message_unref(msg);
 
 	return result;
+
 }//
 
 
@@ -198,7 +202,7 @@ __browser_filter_func (IN DBusConnection *connection,
 void
 __browser_handle_message(IN DBusMessage *msg, IN browserParams *bp) {
 
-	DBGMSG("--> Browser msg\n");
+	//DBGMSG("--> Browser msg\n");
 
 	int mtype = dbus_message_get_type(msg);
 	DBGBEGIN
@@ -211,15 +215,27 @@ __browser_handle_message(IN DBusMessage *msg, IN browserParams *bp) {
 
 	// we only care about signals
 	if (DBUS_MESSAGE_TYPE_SIGNAL != mtype) {
-		DBGMSG("--> mtype: %i\n", mtype);
+		//DBGMSG("--> mtype: %i\n", mtype);
 		return;
 	}
+	DBGBEGIN
+		const char *signal=dbus_message_get_member(msg);
+		printf("--> signal: %s\n", signal);
+	DBGEND;
 
 	// signal name e.g. ItemNew , ItemRemove
 	const char *signalName = dbus_message_get_member(msg);
 	if (NULL==signalName) {
 		// paranoia... shouldn't happen
 		return;
+	}
+
+	if (0==strcmp(signalName, "CacheExhausted")) {
+		browser_push_simple_msg(bp, BMsg::BMSG_CACHEEXHAUSTED);
+	}
+
+	if (0==strcmp(signalName, "AllForNow")) {
+		browser_push_simple_msg(bp, BMsg::BMSG_ALLFORNOW);
 	}
 
 	if ((0==strcmp(signalName, "ItemNew")) || (0==strcmp(signalName, "ItemRemove"))) {

@@ -29,11 +29,10 @@ int main(int argc, char *argv[]) {
 
 	printf("> entering loop\n");
 	do {
-		result=queue_wait(q);
-		if (result) {
-			printf("Error: waiting on queue\n");
-			break;
-		}
+		result=queue_wait_timer(q, 1000*100);
+		if (result)
+			continue;
+
 		msg = (BMsg*) queue_get_nb(q);
 		if (NULL==msg)
 			continue;

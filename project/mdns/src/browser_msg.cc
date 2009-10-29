@@ -5,6 +5,8 @@
  * @author jldupont
  */
 #include <assert.h>
+
+#include "macros.h"
 #include "browser.h"
 #include "browser_msg.h"
 
@@ -18,6 +20,7 @@ browser_push_simple_msg(queue *q, BMsg::BMsgType type) {
 
 	BMsg *m = new BMsg(type);
 
+	DBGMSG("browser: pushing msg into queue\n");
 	queue_put(q, (void *) m);
 }//
 
@@ -27,6 +30,7 @@ browser_push_simple_msg(browserParams *bp, BMsg::BMsgType type) {
 	BMsg *m = new BMsg(type);
 	queue *q = bp->q;
 
+	DBGMSG("browser: pushing msg into queue\n");
 	queue_put(q, (void *) m);
 }//
 
@@ -35,5 +39,6 @@ browser_push_msg(browserParams *bp, BMsg *msg) {
 
 	queue *q = bp->q;
 
+	DBGMSG("browser: pushing msg into queue\n");
 	queue_put(q, (void *) msg);
 }
