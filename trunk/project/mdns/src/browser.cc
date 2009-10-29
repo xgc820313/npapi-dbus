@@ -112,7 +112,7 @@ __browser_send_request_service_browser_new(IN DBusConnection *conn) {
 	DBusMessage *msg;
 
 	DBGMSG(" > Preparing DBus method call\n");
-	msg=dbus_message_new_method_call("org.freedesktop.Avahi",
+	msg=dbus_message_new_method_call("org.freedesktop.Avahi.ServiceBrowser",
 									"/",
 									"org.freedesktop.Avahi.ServiceBrowser",
 									"ServiceBrowserNew");
