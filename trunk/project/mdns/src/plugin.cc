@@ -104,8 +104,8 @@ NPP_New(NPMIMEType pluginType, NPP instance, uint16_t mode, int16_t argc, char* 
   browserParams *bp=NULL;
   int result=browser_init( &bp );
 
-  instance->init_result_code = result;
-  instance->bp = bp;
+  instanceData->init_result_code = result;
+  instanceData->bp = bp;
 
   return NPERR_NO_ERROR;
 }

@@ -39,3 +39,33 @@ browser_push_msg(browserParams *bp, BMsg *msg) {
 
 	queue_put(q, (void *) msg);
 }
+
+
+
+// =================
+
+
+
+
+
+/**
+ * Simple message push i.e. just a type
+ */
+void
+BrowserMessaging::spush(BMsg::BMsgType type) {
+
+	BMsg *m = new BMsg(type);
+
+	queue_put(cc.out, msg);
+}//
+
+/**
+ * Complete Message push
+ */
+void
+BrowserMessaging::push(BMsg::BMsgType type, BMsg& msg) {
+
+	queue_put(cc.out, msg);
+
+}//
+

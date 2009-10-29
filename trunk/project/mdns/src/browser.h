@@ -22,11 +22,29 @@
 		BROWSER_MALLOC_ERROR,
 	} BrowserReturnCode;
 
+	/**
+	 * Bidir Communication Channel
+	 */
+	typedef struct {
+		queue *in;
+		queue *out;
+	} CommChannel;
+
+
 	typedef struct {
 
 		DBusConnection *conn;
 		pthread_t thread;
+
+		CommChannel ch;
+
+		/*
+		// Browser --> Caller
 		queue *q;
+
+		// Caller --> Browser
+		queue *qin;
+		*/
 
 	} browserParams;
 
