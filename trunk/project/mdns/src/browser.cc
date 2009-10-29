@@ -4,8 +4,17 @@
  * @date 2009-10-28
  * @author jldupont
  */
+#include <stdio.h>
+#include <string.h>
+
 #include "browser.h"
 #include "browser_msg.h"
+
+#include<iostream>
+#include <sstream>
+
+using namespace std;
+
 
 //{{ PROTOTYPES
 
@@ -23,7 +32,7 @@ BrowserReturnCode browser_init(OUT browserParams **bp) {
 	//if this fails, we aint' going far anyway...
 	*bp = (browserParams *) malloc(sizeof(browserParams));
 	if (NULL==*bp) {
-		return BMSG_MALLOC_ERROR;
+		return BROWSER_MALLOC_ERROR;
 	}
 
 	DBusError error;
@@ -31,19 +40,24 @@ BrowserReturnCode browser_init(OUT browserParams **bp) {
 
 	dbus_error_init (&error);
 
+	DBGMSG("> Attempting DBus connection\n");
 	(*bp)->conn = dbus_bus_get (type, &error);
 	if (NULL==(*bp)->conn) {
+		DBGMSG("Error: DBus connection\n");
 	  dbus_error_free (&error);
 	  free(bp);
 	  return BROWSER_DBUS_CONN_ERROR;
 	}
 
+	DBGMSG("> Creating communication queue\n");
 	//if this fails, we aint' going far anyway...
 	(*bp)->q=queue_create();
 	if (NULL==*bp) {
 		free(bp);
-		return BMSG_MALLOC_ERROR;
+		return BROWSER_MALLOC_ERROR;
 	}
+
+	dbus_error_free (&error);
 
 	pthread_create(&((*bp)->thread), NULL, &__browser_thread_function, (void *) *bp);
 
@@ -51,7 +65,7 @@ BrowserReturnCode browser_init(OUT browserParams **bp) {
 }//
 
 void *
-__browser_thread_function(void *vbp) {
+__browser_thread_function(IN void *vbp) {
 
 	DBusError error;
 
@@ -64,6 +78,8 @@ __browser_thread_function(void *vbp) {
 		//@TODO better way to handle this...
 		browser_push_simple_msg( bp, BMsg::BMSG_DBUS_ADDFILTER_ERROR );
 	}
+
+	dbus_error_init (&error);
 
 	dbus_bus_add_match(conn, "interface=org.freedesktop.Avahi.ServiceBrowser", &error);
 	if (dbus_error_is_set(&error)) {
@@ -86,7 +102,7 @@ __browser_thread_function(void *vbp) {
 }//
 
 int
-__browser_send_request_service_browser_new(DBusConnection *conn) {
+__browser_send_request_service_browser_new(IN DBusConnection *conn) {
 
 	DBusMessage *msg;
 
@@ -148,9 +164,9 @@ __browser_send_request_service_browser_new(DBusConnection *conn) {
 
 
 DBusHandlerResult
-__browser_filter_func (DBusConnection *connection,
-					DBusMessage     *message,
-					void            *vbp)
+__browser_filter_func (IN DBusConnection *connection,
+						IN DBusMessage   *message,
+						IN void          *vbp)
 {
 	//DBGLOG(LOG_INFO, "ingress_filter_func, conn: %i  message: %i", connection, message);
 
@@ -167,21 +183,21 @@ __browser_filter_func (DBusConnection *connection,
 }//
 
 void
-__browser_handle_message(DBusMessage *msg, browserParams *bp) {
+__browser_handle_message(IN DBusMessage *msg, IN browserParams *bp) {
 
 	// we only care about signals
-	if (DBUS_MESSAGE_TYPE_SIGNAL != dbus_message_get_type(message)) {
+	if (DBUS_MESSAGE_TYPE_SIGNAL != dbus_message_get_type(msg)) {
 		return;
 	}
 
 	// signal name e.g. ItemNew , ItemRemove
-	const char *signalName = dbus_message_get_member(message);
+	const char *signalName = dbus_message_get_member(msg);
 	if (NULL==signalName) {
 		// paranoia... shouldn't happen
 		return;
 	}
 
-	if ((0==strcmp(signalName, "ItemNew")) || (0==strncmp(signalName, "ItemRemove"))) {
+	if ((0==strcmp(signalName, "ItemNew")) || (0==strcmp(signalName, "ItemRemove"))) {
 		__browser__process_signal(msg, bp, signalName);
 	}
 }//
@@ -221,44 +237,70 @@ __browser__process_signal(DBusMessage *msg, browserParams *bp, const char *signa
 	//interface
 	t = dbus_message_iter_get_arg_type (iter);
 	if (DBUS_TYPE_INT32!=t) {
-
+		DBGLOG(LOG_ERR, "browser: expecting (INT32) for 'interface' parameter");
+		free(iter);
+		return;
 	}
 	dbus_message_iter_get_basic (iter, &interface);
 
 	//protocol
 	t = dbus_message_iter_get_arg_type (iter);
 	if (DBUS_TYPE_INT32!=t) {
-
+		DBGLOG(LOG_ERR, "browser: expecting (INT32) for 'protocol' parameter");
+		free(iter);
+		return;
 	}
 	dbus_message_iter_get_basic (iter, &protocol);
 
 	//name
 	t = dbus_message_iter_get_arg_type (iter);
 	if (DBUS_TYPE_STRING!=t) {
-
+		DBGLOG(LOG_ERR, "browser: expecting (STRING) for 'name' parameter");
+		free(iter);
+		return;
 	}
 	dbus_message_iter_get_basic (iter, &name);
 
 	//type
 	t = dbus_message_iter_get_arg_type (iter);
 	if (DBUS_TYPE_STRING!=t) {
-
+		DBGLOG(LOG_ERR, "browser: expecting (STRING) for 'type' parameter");
+		free(iter);
+		return;
 	}
 	dbus_message_iter_get_basic (iter, &type);
 
 	//domain
 	t = dbus_message_iter_get_arg_type (iter);
 	if (DBUS_TYPE_STRING!=t) {
-
+		DBGLOG(LOG_ERR, "browser: expecting (STRING) for 'domain' parameter");
+		free(iter);
+		return;
 	}
 	dbus_message_iter_get_basic (iter, &domain);
 
 	//flags
 	t = dbus_message_iter_get_arg_type (iter);
 	if (DBUS_TYPE_UINT32!=t) {
-
+		DBGLOG(LOG_ERR, "browser: expecting (UINT32) for 'flags' parameter");
+		free(iter);
+		return;
 	}
 	dbus_message_iter_get_basic (iter, &flags);
+	free(iter);
 
+	// =============================================
+
+	std::ostringstream *rjson;
+
+	rjson = new std::ostringstream();
+
+	*rjson << "{ 'signal':'" << signalName << "', 'interface':'" << interface << "',";
+	*rjson << " 'protocol':'" << protocol << "', 'name':'" << name << "','type':'" << type << "',";
+	*rjson << " 'domain':'" << domain << "', 'flags':'" << flags << "' }";
+
+	BMsg *bmsg = new BMsg(BMsg::BMSG_JSON, rjson);
+
+	browser_push_msg(bp, bmsg);
 
 }//

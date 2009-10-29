@@ -19,6 +19,7 @@
 		BROWSER_OK = 0,
 		BROWSER_INVALID_CODE,
 		BROWSER_DBUS_CONN_ERROR,
+		BROWSER_MALLOC_ERROR,
 	} BrowserReturnCode;
 
 	typedef struct {
