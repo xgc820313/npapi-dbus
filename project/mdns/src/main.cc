@@ -38,6 +38,14 @@ int main(int argc, char *argv[]) {
 			continue;
 
 		printf("Msg: type: %i\n", msg->type);
+		if (msg->type==BMsg::BMSG_JSON) {
+			std::stringbuf *sbuf;
+			std:string st;
+			sbuf=msg->json_string->rdbuf();
+			st=sbuf->str();
+			//cout << st;
+			printf("json string: %s\n", st.data());
+		}
 
 		delete msg;
 
