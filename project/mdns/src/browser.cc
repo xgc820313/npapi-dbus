@@ -25,6 +25,37 @@ using namespace std;
 	void __browser__process_signal(DBusMessage *msg, browserParams *bp, const char *signalName);
 //}}
 
+int
+__browser_setup_dbus_conn(CommChannel *cc, DBusConnection **conn) {
+
+	DBusError error;
+
+	dbus_error_init(&error);
+
+	*conn = dbus_bus_get (DBUS_BUS_SYSTEM, &error);
+	dbus_error_free (&error);
+	if (NULL==*conn)
+		goto fail;
+
+	//DBGMSG("> Configuring filter function\n");
+	// Configure the filter function
+	if (!dbus_connection_add_filter (*conn, __browser_filter_func, vbp, NULL)) {
+		browser_push_simple_msg( bp, BMsg::BMSG_DBUS_ADDFILTER_ERROR );
+	}
+
+
+
+	return TRUE;
+
+fail:
+	dbus_error_free (&error);
+
+	return FALSE;
+}//
+
+
+
+
 
 
 BrowserReturnCode browser_init(OUT browserParams **bp) {
@@ -50,7 +81,8 @@ BrowserReturnCode browser_init(OUT browserParams **bp) {
 
 	//if this fails, we aint' going far anyway...
 	(*bp)->q=queue_create();
-	if (NULL==*bp) {
+	(*bp)->qin=queue_create();
+	if ((NULL==(*bp)->q) || (NULL==(*bp)->qin)){
 		free(bp);
 		return BROWSER_MALLOC_ERROR;
 	}

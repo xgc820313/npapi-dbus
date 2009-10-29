@@ -63,8 +63,32 @@
 	};
 
 
+	class BrowserMessaging {
+
+	protected:
+		const CommChannel& cc;
+
+	public:
+		BrowserMessaging(const CommChannel& _cc) {
+			cc=_cc;
+		}
+
+		/**
+		 * Simple message push i.e. just a type
+		 */
+		void spush(BMsg::BMsgType type);
+
+		/**
+		 * Complete Message push
+		 */
+		void push(BMsg::BMsgType type, BMsg& msg);
+
+	};
+
+
 	// Prototypes
 	// ^^^^^^^^^^
+
 	void browser_push_simple_msg(queue *q, BMsg::BMsgType type);
 	void browser_push_simple_msg(browserParams *bp, BMsg::BMsgType type);
 	void browser_push_msg(browserParams *bp, BMsg *msg);
