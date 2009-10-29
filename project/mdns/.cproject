@@ -632,6 +632,7 @@
 <listOptionValue builtIn="false" value="/usr/include/dbus-1.0"/>
 <listOptionValue builtIn="false" value="/usr/lib/dbus-1.0/include"/>
 </option>
+<option id="gnu.cpp.compiler.option.warnings.nowarn.1854740417" superClass="gnu.cpp.compiler.option.warnings.nowarn" value="true" valueType="boolean"/>
 <inputType id="cdt.managedbuild.tool.gnu.cpp.compiler.input.1413153760" superClass="cdt.managedbuild.tool.gnu.cpp.compiler.input"/>
 </tool>
 <tool id="cdt.managedbuild.tool.gnu.cross.cpp.linker.103446920" name="Cross G++ Linker" superClass="cdt.managedbuild.tool.gnu.cross.cpp.linker">
