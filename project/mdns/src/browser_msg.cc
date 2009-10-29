@@ -30,3 +30,10 @@ browser_push_simple_msg(browserParams *bp, BMsg::BMsgType type) {
 	queue_put(q, (void *) m);
 }//
 
+void
+browser_push_msg(browserParams *bp, BMsg *msg) {
+
+	queue *q = bp->q;
+
+	queue_put(q, (void *) msg);
+}
