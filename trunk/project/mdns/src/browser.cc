@@ -74,7 +74,6 @@ __browser_thread_function(IN void *vbp) {
 	//DBGMSG("> Configuring filter function\n");
 	// Configure the filter function
 	if (!dbus_connection_add_filter (conn, __browser_filter_func, vbp, NULL)) {
-		//@TODO better way to handle this...
 		browser_push_simple_msg( bp, BMsg::BMSG_DBUS_ADDFILTER_ERROR );
 	}
 
@@ -83,7 +82,6 @@ __browser_thread_function(IN void *vbp) {
 	//DBGMSG("> Configuring inteface match rule\n");
 	dbus_bus_add_match(conn, "interface=org.freedesktop.Avahi.ServiceBrowser", &error);
 	if (dbus_error_is_set(&error)) {
-		//@TODO better way to handle this...
 		browser_push_simple_msg( bp, BMsg::BMSG_DBUS_ADDMATCH_ERROR );
 	}
 
@@ -91,7 +89,6 @@ __browser_thread_function(IN void *vbp) {
 
 	//DBGMSG("> Registering Client to Avahi ServiceBrowser\n");
 	if (!__browser_send_request_service_browser_new(conn)) {
-		//@TODO better way to handle this...
 		browser_push_simple_msg( bp, BMsg::BMSG_DBUS_SERVICE_BROWSER_ERROR );
 	}
 

@@ -16,8 +16,8 @@
 #include "plugin.h"
 
 
-#define PLUGIN_NAME        "DBus adapter"
-#define PLUGIN_DESCRIPTION PLUGIN_NAME " Serves as 'dbus adapter' for sending and receiving messages"
+#define PLUGIN_NAME        "DBus-mdns adapter"
+#define PLUGIN_DESCRIPTION PLUGIN_NAME " Serves as 'dbus-mdns ServiceBrowser for discovering HTTP services"
 #define PLUGIN_VERSION     "1.0.0.0"
 
 static NPNetscapeFuncs* sBrowserFuncs = NULL;
@@ -64,7 +64,7 @@ NP_GetPluginVersion()
 NP_EXPORT(char*)
 NP_GetMIMEDescription()
 {
-  return "application/basic-plugin:bsc:Basic plugin";
+  return "application/dbus-mdns:dbmdns:dbus-mdns";
 }
 
 NP_EXPORT(NPError)
@@ -101,8 +101,11 @@ NPP_New(NPMIMEType pluginType, NPP instance, uint16_t mode, int16_t argc, char* 
   instanceData->npp = instance;
   instance->pdata = instanceData;
 
-  //@TODO create ingress thread & queue
+  browserParams *bp=NULL;
+  int result=browser_init( &bp );
 
+  instance->init_result_code = result;
+  instance->bp = bp;
 
   return NPERR_NO_ERROR;
 }

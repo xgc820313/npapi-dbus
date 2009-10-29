@@ -14,14 +14,15 @@
    #include <pthread.h>
    #include "dbus/dbus.h"
 
+	#include "browser.h"
+
 
 	// For each plugin instance
 	typedef struct InstanceData {
 	  NPP npp;
 	  NPWindow window;
-	  DBusConnection *conn;
-	  pthread_t egressThread;
-	  pthread_t ingressThread;
+	  browserParams *bp;
+	  int init_result_code;
 	} InstanceData;
 
 
