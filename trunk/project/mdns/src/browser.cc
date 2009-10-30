@@ -25,6 +25,37 @@ using namespace std;
 	void __browser__process_signal(DBusMessage *msg, browserParams *bp, const char *signalName);
 //}}
 
+
+/**
+ * Initialization of a Browser thread
+ *
+ * It is the responsability of the Client user of this
+ * function to clean the CommChannel.
+ *
+ * @param cc: [OUT] pointer to receive the configured fields CommChannel
+ */
+BrowserReturnCode
+browser_init(CommChannel *cc) {
+
+	//if this fails, we aint' going far anyway...
+	cc->in  = queue_create();
+	cc->out = queue_create();
+
+	if ((NULL==cc->in) || (NULL==cc->out)){
+		return BROWSER_MALLOC_ERROR;
+	}
+
+	browserParams *bp = (browserParams *) malloc(sizeof(browserParams));
+	if (NULL==bp)
+		return BROWSER_MALLOC_ERROR;
+
+	bp->cc = cc;
+
+	pthread_create(&((*bp)->thread), NULL, &__browser_thread_function, (void *) bp);
+
+}//
+
+
 int
 __browser_setup_dbus_conn(CommChannel *cc, DBusConnection **conn) {
 

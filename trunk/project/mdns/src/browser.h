@@ -36,15 +36,7 @@
 		DBusConnection *conn;
 		pthread_t thread;
 
-		CommChannel ch;
-
-		/*
-		// Browser --> Caller
-		queue *q;
-
-		// Caller --> Browser
-		queue *qin;
-		*/
+		CommChannel *cc;
 
 	} browserParams;
 
