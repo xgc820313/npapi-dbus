@@ -25,6 +25,7 @@
 
 	public:
 		typedef enum {
+			//values are included for easier debugging
 			BMSG_INVALID=0,
 			BMSG_JSON=1,
 			BMSG_MALLOC_ERROR=2,
@@ -35,6 +36,8 @@
 			BMSG_DBUS_DISCONNECTED=7,
 			BMSG_ALLFORNOW=8,
 			BMSG_CACHEEXHAUSTED=9,
+			BMSG_RECONNECT=10,
+			BMSG_EXIT=11
 		} BMsgType;
 
 	public:
@@ -60,30 +63,16 @@
 				delete json_string;
 		}
 
-	};
-
-
-	class BrowserMessaging {
-
-	protected:
-		const CommChannel& cc;
-
-	public:
-		BrowserMessaging(const CommChannel& _cc) {
-			cc=_cc;
+		bool isExit(void) {
+			return type==BMSG_EXIT;
 		}
 
-		/**
-		 * Simple message push i.e. just a type
-		 */
-		void spush(BMsg::BMsgType type);
-
-		/**
-		 * Complete Message push
-		 */
-		void push(BMsg::BMsgType type, BMsg& msg);
+		bool isReconnect(void) {
+			return type==BMSG_RECONNECT;
+		}
 
 	};
+
 
 
 	// Prototypes

@@ -51,93 +51,43 @@ browser_init(CommChannel *cc) {
 
 	bp->cc = cc;
 
-	pthread_create(&((*bp)->thread), NULL, &__browser_thread_function, (void *) bp);
+	pthread_create(&(bp->thread), NULL, &__browser_thread_function, (void *) bp);
 
 }//
 
 
-int
-__browser_setup_dbus_conn(CommChannel *cc, DBusConnection **conn) {
 
+
+//  PRIVATE FROM HEREON
+// ====================
+
+
+
+
+/**
+ * Sets up access to DBus
+ */
+int
+__browser_setup_dbus_conn(browserParams *bp) {
+
+	int ret=BROWSER_OK;
+	DBusConnection *conn;
 	DBusError error;
 
 	dbus_error_init(&error);
 
-	*conn = dbus_bus_get (DBUS_BUS_SYSTEM, &error);
-	dbus_error_free (&error);
-	if (NULL==*conn)
+	conn = dbus_bus_get (DBUS_BUS_SYSTEM, &error);
+	if (NULL==conn) {
+		ret=BROWSER_DBUS_CONN_ERROR;
 		goto fail;
+	}
 
 	//DBGMSG("> Configuring filter function\n");
 	// Configure the filter function
-	if (!dbus_connection_add_filter (*conn, __browser_filter_func, vbp, NULL)) {
+	if (!dbus_connection_add_filter (conn, __browser_filter_func, bp, NULL)) {
 		browser_push_simple_msg( bp, BMsg::BMSG_DBUS_ADDFILTER_ERROR );
-	}
-
-
-
-	return TRUE;
-
-fail:
-	dbus_error_free (&error);
-
-	return FALSE;
-}//
-
-
-
-
-
-
-BrowserReturnCode browser_init(OUT browserParams **bp) {
-
-	//if this fails, we aint' going far anyway...
-	*bp = (browserParams *) malloc(sizeof(browserParams));
-	if (NULL==*bp) {
-		return BROWSER_MALLOC_ERROR;
-	}
-
-	DBusError error;
-
-	dbus_error_init (&error);
-
-	//DBGMSG("> Attempting DBus connection\n");
-	(*bp)->conn = dbus_bus_get (DBUS_BUS_SYSTEM, &error);
-	if (NULL==(*bp)->conn) {
-		DBGMSG("Error: DBus connection\n");
-	  dbus_error_free (&error);
-	  free(bp);
-	  return BROWSER_DBUS_CONN_ERROR;
-	}
-
-	//if this fails, we aint' going far anyway...
-	(*bp)->q=queue_create();
-	(*bp)->qin=queue_create();
-	if ((NULL==(*bp)->q) || (NULL==(*bp)->qin)){
-		free(bp);
-		return BROWSER_MALLOC_ERROR;
-	}
-
-	dbus_error_free (&error);
-
-	pthread_create(&((*bp)->thread), NULL, &__browser_thread_function, (void *) *bp);
-
-	return BROWSER_OK;
-}//
-
-void *
-__browser_thread_function(IN void *vbp) {
-
-	DBusError error;
-
-	//make shortcuts
-	browserParams *bp=(browserParams *) vbp;
-	DBusConnection *conn=bp->conn;
-
-	//DBGMSG("> Configuring filter function\n");
-	// Configure the filter function
-	if (!dbus_connection_add_filter (conn, __browser_filter_func, vbp, NULL)) {
-		browser_push_simple_msg( bp, BMsg::BMSG_DBUS_ADDFILTER_ERROR );
+		ret=BROWSER_DBUS_FILTER_ERROR;
+		goto fail;
 	}
 
 	dbus_error_init (&error);
@@ -146,26 +96,86 @@ __browser_thread_function(IN void *vbp) {
 	dbus_bus_add_match(conn, "interface=org.freedesktop.Avahi.ServiceBrowser", &error);
 	if (dbus_error_is_set(&error)) {
 		browser_push_simple_msg( bp, BMsg::BMSG_DBUS_ADDMATCH_ERROR );
+		ret=BROWSER_DBUS_MATCH_ERROR;
+		goto fail;
 	}
-
-	dbus_error_free(&error);
 
 	//DBGMSG("> Registering Client to Avahi ServiceBrowser\n");
 	if (!__browser_send_request_service_browser_new(conn)) {
 		browser_push_simple_msg( bp, BMsg::BMSG_DBUS_SERVICE_BROWSER_ERROR );
+		ret = BROWSER_DBUS_SERVICE_ERROR;
+		goto fail;
 	}
 
+	bp->conn = conn;
+	return BROWSER_OK;
+
+fail:
+
+	if (conn) {
+		dbus_connection_close(conn);
+	}
+	bp->conn=NULL;
+
+	dbus_error_free (&error);
+	return ret;
+}//
+
+
+/**
+ * Thread function
+ *
+ * @param _bp: browserParams
+ */
+void *
+__browser_thread_function(IN void *_bp) {
+
+	//make shortcuts
+	browserParams *bp=(browserParams *) _bp;
+	DBusConnection *conn=bp->conn;
+	queue *q=bp->cc->in;
+	BMsg  *msg;
+	int disconnect=FALSE, exit=FALSE;
+	int reconnect=FALSE;
+
+
 	DBGMSG("** Browser thread entering read-write loop\n");
-	while (dbus_connection_read_write_dispatch(conn, 100));
+	do {
+		do {
+			disconnect = dbus_connection_read_write_dispatch(conn, 100);
+
+			msg= (BMsg *) queue_get_nb(q);
+			if (msg) {
+				exit=msg->isExit();
+				delete msg;
+			}
+
+		} while(!exit && !disconnect);
+
+		//wait for a "reconnect" or "exit"
+		do {
+			queue_wait_timer(q, 1000*1000); //usec
+			msg=(BMsg *) queue_get_nb(q);
+			if (msg) {
+
+			}
+
+		} while(TRUE);
+
+
+	} while(!exit);
+
 	DBGMSG("!! Browser thread exiting\n");
 
-	free(vbp);
+	//the field 'cc' of the browserParams struct
+	//needs to be taken care of by the original caller.
+	free(_bp);
 
 	return NULL;
 }//
 
 int
-__browser_send_request_service_browser_new(IN DBusConnection *conn) {
+__browser_send_request_service_browser_new(DBusConnection *conn) {
 
 	DBusMessage *msg, *reply;
 	char *path;
@@ -239,7 +249,7 @@ __browser_send_request_service_browser_new(IN DBusConnection *conn) {
 DBusHandlerResult
 __browser_filter_func (IN DBusConnection *connection,
 						IN DBusMessage   *message,
-						IN void          *vbp)
+						IN void          *_bp)
 {
 	//DBGLOG(LOG_INFO, "ingress_filter_func, conn: %i  message: %i", connection, message);
 
@@ -249,7 +259,7 @@ __browser_filter_func (IN DBusConnection *connection,
 	} else {
 
 		// main message handling starts here
-		__browser_handle_message(message, (browserParams *)vbp);
+		__browser_handle_message(message, (browserParams *)_bp);
 	}
 
 	return DBUS_HANDLER_RESULT_HANDLED;
