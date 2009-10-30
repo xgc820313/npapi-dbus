@@ -25,6 +25,147 @@ using namespace std;
 	void __browser__process_signal(DBusMessage *msg, browserParams *bp, const char *signalName);
 //}}
 
+	// FSM related
+	// ***********
+
+typedef enum {
+		E_NULL=0,
+		E_ANY=1,
+		E_DBUS_DISCONNECT,
+		E_CONNECT_OK,
+		E_CONNECT_ERROR,
+		E_CMD_RECONNECT,
+		E_CMD_EXIT
+	} FsmEvent;
+
+typedef enum {
+		ST_START=0, //default is also the entry
+		ST_CONNECT,
+		ST_SERVE,
+		ST_WAIT,
+		ST_EXIT,
+		//======
+		ST_TRAP,
+	} FsmState;
+
+typedef struct {
+		FsmState state;
+		FsmEvent event;
+		browserParams *bp;
+	} FsmContext;
+
+
+typedef FsmEvent StateFn(FsmContext *c);
+
+
+//prototypes
+StateFn ActionConnect, ActionServer, ActionWait, ActionExit;
+
+
+typedef struct {
+	FsmState current_state;
+	FsmEvent event;
+	FsmState next_state;
+	StateFn  (*action)(FsmContext *);
+} TransitionElement;
+
+
+TransitionElement TransitionTable[] = {
+
+		{ST_START,   E_ANY,             ST_CONNECT, &ActionConnect},
+
+		{ST_CONNECT, E_NULL,            ST_CONNECT, &ActionConnect},
+		{ST_CONNECT, E_CONNECT_OK,      ST_SERVE,   &ActionServe},
+		{ST_CONNECT, E_CONNECT_ERROR,   ST_WAIT,    &ActionWait},
+		{ST_CONNECT, E_ANY,             ST_WAIT,    &ActionWait},
+
+		{ST_SERVE,   E_DBUS_DISCONNECT, ST_WAIT,    &ActionWait},
+		{ST_SERVE,   E_CMD_EXIT,        ST_EXIT,    &ActionExit},
+		{ST_SERVE,   E_ANY,             ST_SERVE,   &ActionServe},
+
+		{ST_WAIT,    E_CMD_RECONNECT,   ST_CONNECT, &ActionConnect},
+		{ST_WAIT,    E_CMD_EXIT,        ST_EXIT,    &ActionExit},
+		{ST_WAIT,    E_ANY,             ST_WAIT,    &ActionWait},
+
+		{ST_TRAP,    E_ANY,             ST_CONNECT, &ActionConnect}
+};
+
+
+
+// *************************************************************************
+// *************************************************************************
+
+
+FsmEvent
+event_pump(browserParams *bp) {
+
+	assert(bp);
+
+	DBusConnection *conn = bp->conn;
+
+	// connected on DBus yet?
+	if (NULL!=conn) {
+		int disconnect = dbus_connection_read_write_dispatch(conn, 100 /*timeout*/);
+		if (disconnect) {
+			return E_DBUS_DISCONNECT;
+		}
+	}
+
+	int mtype=BMsg::BMSG_INVALID;
+	BMsg *msg=queue_get_nb(bp->cc->in);
+	if (NULL!=msg) {
+		mtype=msg->type;
+	}
+
+	FsmEvent ret = E_NULL;
+	switch(type) {
+	case BMsg::BMSG_RECONNECT:
+		ret=E_CMD_RECONNECT;
+		break;
+	case BMsg::BMSG_EXIT:
+		ret=E_CMD_EXIT;
+		break;
+	default:
+		ret=E_NULL;
+		break;
+	}
+
+	if (NULL!=msg)
+		delete msg;
+
+	return ret;
+}//
+
+
+void
+run_fsm(browserParams *bp) {
+
+	FsmState cs = ST_START;
+	FsmEvent ce = E_NULL, re;
+
+	int tcount=sizeof(TransitionTable)/sizeof(TransitionElement);
+
+	do {
+		for (int i=0; i<tcount;i++) {
+			FsmState ts = TransitionTable[i].current_state;
+			FsmEvent te = TransitionTable[i].event;
+			FsmEvent  (*action)(FsmContext *) = TransitionTable[i].action;
+
+			// state matches?
+			if ((cs == ts) || (ST_TRAP == ts)) {
+				// event matches?
+				if ((te==ce) || (E_ANY==te)) {
+					re = (*action)(bp);
+				}
+			}
+
+		}//for
+
+	} while(cs != ST_EXIT);
+
+}//
+
+
 
 /**
  * Initialization of a Browser thread
@@ -37,22 +178,38 @@ using namespace std;
 BrowserReturnCode
 browser_init(CommChannel *cc) {
 
+	assert(cc);
+
 	//if this fails, we aint' going far anyway...
 	cc->in  = queue_create();
 	cc->out = queue_create();
 
-	if ((NULL==cc->in) || (NULL==cc->out)){
-		return BROWSER_MALLOC_ERROR;
-	}
+	if ((NULL==cc->in) || (NULL==cc->out))
+		goto clean;
 
 	browserParams *bp = (browserParams *) malloc(sizeof(browserParams));
 	if (NULL==bp)
-		return BROWSER_MALLOC_ERROR;
+		goto clean;
 
 	bp->cc = cc;
 
 	pthread_create(&(bp->thread), NULL, &__browser_thread_function, (void *) bp);
 
+ok:
+	return BROWSER_OK;
+//  ==================
+
+clean:
+
+	if (cc->in)
+		free(cc->in);
+	if (cc->out)
+		free(cc->out);
+
+	cc->in =NULL;
+	cc->out=NULL;
+
+	return BROWSER_MALLOC_ERROR;
 }//
 
 
@@ -60,6 +217,12 @@ browser_init(CommChannel *cc) {
 
 //  PRIVATE FROM HEREON
 // ====================
+
+FsmEvent
+StateConnect(FsmContext *ct) {
+
+}//
+
 
 
 
