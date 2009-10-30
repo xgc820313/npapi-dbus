@@ -18,8 +18,13 @@
 	typedef enum {
 		BROWSER_OK = 0,
 		BROWSER_INVALID_CODE,
-		BROWSER_DBUS_CONN_ERROR,
 		BROWSER_MALLOC_ERROR,
+
+		BROWSER_DBUS_CONN_ERROR,
+		BROWSER_DBUS_FILTER_ERROR,
+		BROWSER_DBUS_MATCH_ERROR,
+		BROWSER_DBUS_SERVICE_ERROR,
+
 	} BrowserReturnCode;
 
 	/**
@@ -42,7 +47,7 @@
 
 	// PROTOTYPES
 	// ===========
-	BrowserReturnCode browser_init(OUT browserParams **bp);
+	BrowserReturnCode browser_init(CommChannel *cc);
 
 
 #endif /* BROWSER_H_ */
