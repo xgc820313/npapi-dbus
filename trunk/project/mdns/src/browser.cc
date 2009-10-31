@@ -6,6 +6,7 @@
  */
 #include <stdio.h>
 #include <string.h>
+#include <assert.h>
 
 #include "browser.h"
 #include "browser_msg.h"
@@ -55,18 +56,18 @@ typedef struct {
 	} FsmContext;
 
 
-typedef FsmEvent StateFn(FsmContext *c);
+typedef void StateFn(FsmContext *c);
 
 
 //prototypes
-StateFn ActionConnect, ActionServer, ActionWait, ActionExit;
+StateFn ActionConnect, ActionServe, ActionWait, ActionExit;
 
 
 typedef struct {
 	FsmState current_state;
 	FsmEvent event;
 	FsmState next_state;
-	StateFn  (*action)(FsmContext *);
+	void  (*action)(FsmContext *);
 } TransitionElement;
 
 
@@ -96,6 +97,65 @@ TransitionElement TransitionTable[] = {
 // *************************************************************************
 
 
+
+
+/**
+ * Initialization of a Browser thread
+ *
+ * It is the responsability of the Client user of this
+ * function to clean the CommChannel.
+ *
+ * @param cc: [OUT] pointer to receive the configured fields CommChannel
+ */
+BrowserReturnCode
+browser_init(CommChannel *cc) {
+
+	assert(cc);
+
+	browserParams *bp = (browserParams *) malloc(sizeof(browserParams));
+	if (NULL==bp)
+		goto exit;
+
+	//if this fails, we aint' going far anyway...
+	cc->in  = queue_create();
+	cc->out = queue_create();
+
+	if ((NULL==cc->in) || (NULL==cc->out))
+		goto clean;
+
+	bp->cc = cc;
+
+	pthread_create(&(bp->thread), NULL, &__browser_thread_function, (void *) bp);
+
+ok:
+	return BROWSER_OK;
+//  ==================
+
+clean:
+
+	if (cc->in)
+		free(cc->in);
+	if (cc->out)
+		free(cc->out);
+
+exit:
+
+	cc->in =NULL;
+	cc->out=NULL;
+
+	return BROWSER_MALLOC_ERROR;
+}//
+
+
+
+
+//  PRIVATE FROM HEREON <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
+// ====================
+
+
+
+
+
 FsmEvent
 event_pump(browserParams *bp) {
 
@@ -112,13 +172,13 @@ event_pump(browserParams *bp) {
 	}
 
 	int mtype=BMsg::BMSG_INVALID;
-	BMsg *msg=queue_get_nb(bp->cc->in);
+	BMsg *msg= (BMsg *) queue_get_nb(bp->cc->in);
 	if (NULL!=msg) {
 		mtype=msg->type;
 	}
 
 	FsmEvent ret = E_NULL;
-	switch(type) {
+	switch(mtype) {
 	case BMsg::BMSG_RECONNECT:
 		ret=E_CMD_RECONNECT;
 		break;
@@ -140,88 +200,70 @@ event_pump(browserParams *bp) {
 void
 run_fsm(browserParams *bp) {
 
-	FsmState cs = ST_START;
-	FsmEvent ce = E_NULL, re;
+	FsmState currentState = ST_START;
+	FsmEvent currentEvent = E_NULL, re;
+	FsmContext fc;
+
+	fc.bp = bp;
 
 	int tcount=sizeof(TransitionTable)/sizeof(TransitionElement);
 
 	do {
+		currentEvent = event_pump(bp);
+
 		for (int i=0; i<tcount;i++) {
 			FsmState ts = TransitionTable[i].current_state;
 			FsmEvent te = TransitionTable[i].event;
-			FsmEvent  (*action)(FsmContext *) = TransitionTable[i].action;
+			void  (*action)(FsmContext *) = TransitionTable[i].action;
 
 			// state matches?
-			if ((cs == ts) || (ST_TRAP == ts)) {
+			if ((currentState == ts) || (ST_TRAP == ts)) {
 				// event matches?
-				if ((te==ce) || (E_ANY==te)) {
-					re = (*action)(bp);
+				if ((currentEvent==te) || (E_ANY==te)) {
+
+					// ** PATTERN MATCH **
+					fc.state = currentState;
+					fc.event = currentEvent;
+					(*action)(&fc);
+					currentState = ts; //new "current" state
+					break;
 				}
-			}
+			}// ===============================================
 
 		}//for
 
-	} while(cs != ST_EXIT);
+	} while(currentState != ST_EXIT);
+
+}//
+
+
+void
+ActionConnect(FsmContext *c) {
+
+}//
+
+
+void
+ActionServe(FsmContext *c) {
+
+}//
+
+
+void
+ActionWait(FsmContext *c) {
+
+}//
+
+
+void
+ActionExit(FsmContext *c) {
+
+	//push exit message back to the Client
 
 }//
 
 
 
-/**
- * Initialization of a Browser thread
- *
- * It is the responsability of the Client user of this
- * function to clean the CommChannel.
- *
- * @param cc: [OUT] pointer to receive the configured fields CommChannel
- */
-BrowserReturnCode
-browser_init(CommChannel *cc) {
-
-	assert(cc);
-
-	//if this fails, we aint' going far anyway...
-	cc->in  = queue_create();
-	cc->out = queue_create();
-
-	if ((NULL==cc->in) || (NULL==cc->out))
-		goto clean;
-
-	browserParams *bp = (browserParams *) malloc(sizeof(browserParams));
-	if (NULL==bp)
-		goto clean;
-
-	bp->cc = cc;
-
-	pthread_create(&(bp->thread), NULL, &__browser_thread_function, (void *) bp);
-
-ok:
-	return BROWSER_OK;
-//  ==================
-
-clean:
-
-	if (cc->in)
-		free(cc->in);
-	if (cc->out)
-		free(cc->out);
-
-	cc->in =NULL;
-	cc->out=NULL;
-
-	return BROWSER_MALLOC_ERROR;
-}//
-
-
-
-
-//  PRIVATE FROM HEREON
-// ====================
-
-FsmEvent
-StateConnect(FsmContext *ct) {
-
-}//
 
 
 
@@ -291,43 +333,10 @@ fail:
  * @param _bp: browserParams
  */
 void *
-__browser_thread_function(IN void *_bp) {
-
-	//make shortcuts
-	browserParams *bp=(browserParams *) _bp;
-	DBusConnection *conn=bp->conn;
-	queue *q=bp->cc->in;
-	BMsg  *msg;
-	int disconnect=FALSE, exit=FALSE;
-	int reconnect=FALSE;
-
+__browser_thread_function(void *bp) {
 
 	DBGMSG("** Browser thread entering read-write loop\n");
-	do {
-		do {
-			disconnect = dbus_connection_read_write_dispatch(conn, 100);
-
-			msg= (BMsg *) queue_get_nb(q);
-			if (msg) {
-				exit=msg->isExit();
-				delete msg;
-			}
-
-		} while(!exit && !disconnect);
-
-		//wait for a "reconnect" or "exit"
-		do {
-			queue_wait_timer(q, 1000*1000); //usec
-			msg=(BMsg *) queue_get_nb(q);
-			if (msg) {
-
-			}
-
-		} while(TRUE);
-
-
-	} while(!exit);
-
+		run_fsm(bp);
 	DBGMSG("!! Browser thread exiting\n");
 
 	//the field 'cc' of the browserParams struct
@@ -418,7 +427,7 @@ __browser_filter_func (IN DBusConnection *connection,
 
 	if (dbus_message_is_signal (message, DBUS_INTERFACE_LOCAL, "Disconnected")) {
 
-		browser_push_simple_msg( (browserParams *) vbp, BMsg::BMSG_DBUS_DISCONNECTED );
+		browser_push_simple_msg( (browserParams *) _bp, BMsg::BMSG_DBUS_DISCONNECTED );
 	} else {
 
 		// main message handling starts here
