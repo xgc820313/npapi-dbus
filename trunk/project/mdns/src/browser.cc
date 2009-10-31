@@ -24,6 +24,7 @@ using namespace std;
 	void __browser_handle_message(DBusMessage *msg, browserParams *bp);
 	int __browser_send_request_service_browser_new(DBusConnection *conn);
 	void __browser__process_signal(DBusMessage *msg, browserParams *bp, const char *signalName);
+	int __browser_setup_dbus_conn(browserParams **bp);
 //}}
 
 	// FSM related
@@ -56,7 +57,7 @@ typedef struct {
 	} FsmContext;
 
 
-typedef void StateFn(FsmContext *c);
+typedef FsmEvent StateFn(FsmContext *c);
 
 
 //prototypes
@@ -67,7 +68,7 @@ typedef struct {
 	FsmState current_state;
 	FsmEvent event;
 	FsmState next_state;
-	void  (*action)(FsmContext *);
+	FsmEvent  (*action)(FsmContext *);
 } TransitionElement;
 
 
@@ -165,10 +166,8 @@ event_pump(browserParams *bp) {
 
 	// connected on DBus yet?
 	if (NULL!=conn) {
-		int disconnect = dbus_connection_read_write_dispatch(conn, 100 /*timeout*/);
-		if (disconnect) {
+		if (dbus_connection_read_write_dispatch(conn, 100 /*timeout*/))
 			return E_DBUS_DISCONNECT;
-		}
 	}
 
 	int mtype=BMsg::BMSG_INVALID;
@@ -201,7 +200,7 @@ void
 run_fsm(browserParams *bp) {
 
 	FsmState currentState = ST_START;
-	FsmEvent currentEvent = E_NULL, re;
+	FsmEvent currentEvent = E_NULL, re=E_NULL;
 	FsmContext fc;
 
 	fc.bp = bp;
@@ -209,12 +208,19 @@ run_fsm(browserParams *bp) {
 	int tcount=sizeof(TransitionTable)/sizeof(TransitionElement);
 
 	do {
-		currentEvent = event_pump(bp);
+		// we've got an event from the last
+		// "action": process it before we take on
+		// some other events
+		if (E_NULL!=re)
+			currentEvent = re;
+
+		if (E_NULL==re)
+			currentEvent = event_pump(bp);
 
 		for (int i=0; i<tcount;i++) {
 			FsmState ts = TransitionTable[i].current_state;
 			FsmEvent te = TransitionTable[i].event;
-			void  (*action)(FsmContext *) = TransitionTable[i].action;
+			FsmEvent (*action)(FsmContext *) = TransitionTable[i].action;
 
 			// state matches?
 			if ((currentState == ts) || (ST_TRAP == ts)) {
@@ -224,7 +230,7 @@ run_fsm(browserParams *bp) {
 					// ** PATTERN MATCH **
 					fc.state = currentState;
 					fc.event = currentEvent;
-					(*action)(&fc);
+					re = (*action)(&fc);
 					currentState = ts; //new "current" state
 					break;
 				}
@@ -237,25 +243,65 @@ run_fsm(browserParams *bp) {
 }//
 
 
-void
+FsmEvent
 ActionConnect(FsmContext *c) {
 
+	FsmEvent event=E_NULL;
+	browserParams *bp = c->bp;
+
+	int ret=__browser_setup_dbus_conn( &bp );
+
+	switch(ret) {
+	case BROWSER_DBUS_CONN_ERROR:
+		DBGLOG(LOG_ERR, "browser: dbus connection error\n");
+		event=E_CONNECT_ERROR;
+		break;
+
+	case BROWSER_DBUS_FILTER_ERROR:
+		DBGLOG(LOG_ERR, "browser: dbus connection error: can't install filter function\n");
+		event=E_CONNECT_ERROR;
+		break;
+
+	case BROWSER_DBUS_MATCH_ERROR:
+		DBGLOG(LOG_ERR, "browser: dbus connection error: can't install match filter function\n");
+		event=E_CONNECT_ERROR;
+		break;
+
+	case BROWSER_DBUS_SERVICE_ERROR:
+		DBGLOG(LOG_ERR, "browser: dbus connection error: can't connect to Avahi\n");
+		event=E_CONNECT_ERROR;
+		break;
+
+	default:
+		event=E_NULL;
+		break;
+	}
+
+	return event;
 }//
 
 
-void
+FsmEvent
 ActionServe(FsmContext *c) {
 
+	// not much to do... the event_pump
+	// takes care of the waiting ;-)
+
+	return E_NULL;
 }//
 
 
-void
+FsmEvent
 ActionWait(FsmContext *c) {
 
+	// not much to do... the event_pump
+	// takes care of the waiting ;-)
+
+	return E_NULL;
 }//
 
 
-void
+FsmEvent
 ActionExit(FsmContext *c) {
 
 	//push exit message back to the Client
@@ -266,14 +312,22 @@ ActionExit(FsmContext *c) {
 
 
 
+// ============================================================================================
+// ============================================================================================
+// ============================================================================================
+
+
+
 
 
 
 /**
  * Sets up access to DBus
+ *
+ * Returns the DBusConnection in *bp
  */
 int
-__browser_setup_dbus_conn(browserParams *bp) {
+__browser_setup_dbus_conn(browserParams **bp) {
 
 	int ret=BROWSER_OK;
 	DBusConnection *conn;
@@ -290,7 +344,7 @@ __browser_setup_dbus_conn(browserParams *bp) {
 	//DBGMSG("> Configuring filter function\n");
 	// Configure the filter function
 	if (!dbus_connection_add_filter (conn, __browser_filter_func, bp, NULL)) {
-		browser_push_simple_msg( bp, BMsg::BMSG_DBUS_ADDFILTER_ERROR );
+		browser_push_simple_msg( *bp, BMsg::BMSG_DBUS_ADDFILTER_ERROR );
 		ret=BROWSER_DBUS_FILTER_ERROR;
 		goto fail;
 	}
@@ -300,19 +354,19 @@ __browser_setup_dbus_conn(browserParams *bp) {
 	//DBGMSG("> Configuring inteface match rule\n");
 	dbus_bus_add_match(conn, "interface=org.freedesktop.Avahi.ServiceBrowser", &error);
 	if (dbus_error_is_set(&error)) {
-		browser_push_simple_msg( bp, BMsg::BMSG_DBUS_ADDMATCH_ERROR );
+		browser_push_simple_msg( *bp, BMsg::BMSG_DBUS_ADDMATCH_ERROR );
 		ret=BROWSER_DBUS_MATCH_ERROR;
 		goto fail;
 	}
 
 	//DBGMSG("> Registering Client to Avahi ServiceBrowser\n");
 	if (!__browser_send_request_service_browser_new(conn)) {
-		browser_push_simple_msg( bp, BMsg::BMSG_DBUS_SERVICE_BROWSER_ERROR );
+		browser_push_simple_msg( *bp, BMsg::BMSG_DBUS_SERVICE_BROWSER_ERROR );
 		ret = BROWSER_DBUS_SERVICE_ERROR;
 		goto fail;
 	}
 
-	bp->conn = conn;
+	(*bp)->conn = conn;
 	return BROWSER_OK;
 
 fail:
@@ -320,7 +374,7 @@ fail:
 	if (conn) {
 		dbus_connection_close(conn);
 	}
-	bp->conn=NULL;
+	(*bp)->conn=NULL;
 
 	dbus_error_free (&error);
 	return ret;
@@ -336,12 +390,12 @@ void *
 __browser_thread_function(void *bp) {
 
 	DBGMSG("** Browser thread entering read-write loop\n");
-		run_fsm(bp);
+		run_fsm( (browserParams *) bp);
 	DBGMSG("!! Browser thread exiting\n");
 
 	//the field 'cc' of the browserParams struct
 	//needs to be taken care of by the original caller.
-	free(_bp);
+	free((browserParams *)bp);
 
 	return NULL;
 }//
