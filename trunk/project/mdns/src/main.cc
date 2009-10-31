@@ -10,28 +10,28 @@
 
 int main(int argc, char *argv[]) {
 
-	browserParams *bp;
+	CommChannel *cc=(CommChannel *) malloc(sizeof(CommChannel));
 	queue *q;
 	BMsg *msg;
 
-	int result;
-
 	printf("> starting\n");
 
-	result=browser_init( &bp );
+	int result=browser_init( cc );
 	if (BROWSER_OK != result) {
 		printf("Error: result code: %i\n", result);
 		exit(1);
 	}
 
 	//shortcut
-	q=bp->q;
+	q=cc->out;
 
-	printf("> entering loop\n");
+	printf("> entering loop, q=%i\n", q);
 	do {
 		result=queue_wait_timer(q, 1000*100);
 		if (result)
 			continue;
+
+		printf("msg waiting...");
 
 		msg = (BMsg*) queue_get_nb(q);
 		if (NULL==msg)

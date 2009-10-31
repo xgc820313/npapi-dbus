@@ -106,7 +106,7 @@ TransitionElement TransitionTable[] = {
  * It is the responsability of the Client user of this
  * function to clean the CommChannel.
  *
- * @param cc: [OUT] pointer to receive the configured fields CommChannel
+ * @param cc: [IN/OUT] pointer to receive the configured fields CommChannel
  */
 BrowserReturnCode
 browser_init(CommChannel *cc) {
@@ -199,7 +199,7 @@ event_pump(browserParams *bp) {
 void
 run_fsm(browserParams *bp) {
 
-	FsmState currentState = ST_START;
+	FsmState currentState = ST_START, nextState;
 	FsmEvent currentEvent = E_NULL, re=E_NULL;
 	FsmContext fc;
 
@@ -207,6 +207,7 @@ run_fsm(browserParams *bp) {
 
 	int tcount=sizeof(TransitionTable)/sizeof(TransitionElement);
 
+	DBGMSG("=> entering FSM loop\n");
 	do {
 		// we've got an event from the last
 		// "action": process it before we take on
@@ -219,6 +220,7 @@ run_fsm(browserParams *bp) {
 
 		for (int i=0; i<tcount;i++) {
 			FsmState ts = TransitionTable[i].current_state;
+			FsmState ns = TransitionTable[i].next_state;
 			FsmEvent te = TransitionTable[i].event;
 			FsmEvent (*action)(FsmContext *) = TransitionTable[i].action;
 
@@ -230,8 +232,10 @@ run_fsm(browserParams *bp) {
 					// ** PATTERN MATCH **
 					fc.state = currentState;
 					fc.event = currentEvent;
+
+					DBGMSG("=> dispatching to action, state=%i, event=%i\n", ts, te);
 					re = (*action)(&fc);
-					currentState = ts; //new "current" state
+					currentState = ns; //new "current" state
 					break;
 				}
 			}// ===============================================
@@ -239,6 +243,7 @@ run_fsm(browserParams *bp) {
 		}//for
 
 	} while(currentState != ST_EXIT);
+	DBGMSG("=> exiting FSM loop\n");
 
 }//
 
@@ -247,9 +252,8 @@ FsmEvent
 ActionConnect(FsmContext *c) {
 
 	FsmEvent event=E_NULL;
-	browserParams *bp = c->bp;
 
-	int ret=__browser_setup_dbus_conn( &bp );
+	int ret=__browser_setup_dbus_conn( &(c->bp) );
 
 	switch(ret) {
 	case BROWSER_DBUS_CONN_ERROR:
@@ -272,6 +276,11 @@ ActionConnect(FsmContext *c) {
 		event=E_CONNECT_ERROR;
 		break;
 
+	case BROWSER_OK:
+		DBGMSG("Browser: connect ok!\n");
+		event=E_CONNECT_OK;
+		break;
+
 	default:
 		event=E_NULL;
 		break;
@@ -284,6 +293,8 @@ ActionConnect(FsmContext *c) {
 FsmEvent
 ActionServe(FsmContext *c) {
 
+	DBGMSG("--- ActionServe\n");
+
 	// not much to do... the event_pump
 	// takes care of dispatching work to be done.
 
@@ -293,6 +304,8 @@ ActionServe(FsmContext *c) {
 
 FsmEvent
 ActionWait(FsmContext *c) {
+
+	DBGMSG("--- ActionWait\n");
 
 	// not much to do... the event_pump
 	// takes care of the waiting ;-)
