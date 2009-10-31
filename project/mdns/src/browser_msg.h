@@ -24,8 +24,10 @@
 	class BMsg {
 
 	public:
+
+		//values are included for easier debugging
 		typedef enum {
-			//values are included for easier debugging
+			//From Browser to Client
 			BMSG_INVALID=0,
 			BMSG_JSON=1,
 			BMSG_MALLOC_ERROR=2,
@@ -36,10 +38,11 @@
 			BMSG_DBUS_DISCONNECTED=7,
 			BMSG_ALLFORNOW=8,
 			BMSG_CACHEEXHAUSTED=9,
+			BMSG_EXITED=10,
 
 			//From Client
-			BMSG_RECONNECT=10,
-			BMSG_EXIT=11
+			BMSG_RECONNECT=11,
+			BMSG_EXIT=12
 		} BMsgType;
 
 	public:

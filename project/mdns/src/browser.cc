@@ -285,7 +285,7 @@ FsmEvent
 ActionServe(FsmContext *c) {
 
 	// not much to do... the event_pump
-	// takes care of the waiting ;-)
+	// takes care of dispatching work to be done.
 
 	return E_NULL;
 }//
@@ -304,8 +304,12 @@ ActionWait(FsmContext *c) {
 FsmEvent
 ActionExit(FsmContext *c) {
 
-	//push exit message back to the Client
+	DBGLOG(LOG_INFO, "browser: exiting");
 
+	//push exit message back to the Client
+	browser_push_simple_msg(c->bp, BMsg::BMSG_EXITED);
+
+	return E_CMD_EXIT;
 }//
 
 
