@@ -117,6 +117,8 @@ browser_init(CommChannel *cc) {
 	if (NULL==bp)
 		goto exit;
 
+	bzero(bp, sizeof(browserParams));
+
 	//if this fails, we aint' going far anyway...
 	cc->in  = queue_create();
 	cc->out = queue_create();
@@ -177,6 +179,7 @@ event_pump(browserParams *bp) {
 	}
 
 	FsmEvent ret = E_NULL;
+
 	switch(mtype) {
 	case BMsg::BMSG_RECONNECT:
 		ret=E_CMD_RECONNECT;
@@ -207,7 +210,6 @@ run_fsm(browserParams *bp) {
 
 	int tcount=sizeof(TransitionTable)/sizeof(TransitionElement);
 
-	DBGMSG("=> entering FSM loop\n");
 	do {
 		// we've got an event from the last
 		// "action": process it before we take on
@@ -233,7 +235,7 @@ run_fsm(browserParams *bp) {
 					fc.state = currentState;
 					fc.event = currentEvent;
 
-					DBGMSG("=> dispatching to action, state=%i, event=%i\n", ts, te);
+					//DBGMSG("=> dispatching to action, state=%i, event=%i\n", ts, te);
 					re = (*action)(&fc);
 					currentState = ns; //new "current" state
 					break;
@@ -243,8 +245,6 @@ run_fsm(browserParams *bp) {
 		}//for
 
 	} while(currentState != ST_EXIT);
-	DBGMSG("=> exiting FSM loop\n");
-
 }//
 
 
@@ -293,8 +293,6 @@ ActionConnect(FsmContext *c) {
 FsmEvent
 ActionServe(FsmContext *c) {
 
-	DBGMSG("--- ActionServe\n");
-
 	// not much to do... the event_pump
 	// takes care of dispatching work to be done.
 
@@ -305,8 +303,6 @@ ActionServe(FsmContext *c) {
 FsmEvent
 ActionWait(FsmContext *c) {
 
-	DBGMSG("--- ActionWait\n");
-
 	// not much to do... the event_pump
 	// takes care of the waiting ;-)
 
@@ -316,8 +312,6 @@ ActionWait(FsmContext *c) {
 
 FsmEvent
 ActionExit(FsmContext *c) {
-
-	DBGLOG(LOG_INFO, "browser: exiting");
 
 	//push exit message back to the Client
 	browser_push_simple_msg(c->bp, BMsg::BMSG_EXITED);
@@ -360,7 +354,7 @@ __browser_setup_dbus_conn(browserParams **bp) {
 
 	//DBGMSG("> Configuring filter function\n");
 	// Configure the filter function
-	if (!dbus_connection_add_filter (conn, __browser_filter_func, bp, NULL)) {
+	if (!dbus_connection_add_filter (conn, __browser_filter_func, *bp, NULL)) {
 		browser_push_simple_msg( *bp, BMsg::BMSG_DBUS_ADDFILTER_ERROR );
 		ret=BROWSER_DBUS_FILTER_ERROR;
 		goto fail;
@@ -494,7 +488,7 @@ __browser_filter_func (IN DBusConnection *connection,
 						IN DBusMessage   *message,
 						IN void          *_bp)
 {
-	//DBGLOG(LOG_INFO, "ingress_filter_func, conn: %i  message: %i", connection, message);
+	DBGLOG(LOG_INFO, "ingress_filter_func, conn: %i  message: %i", connection, message);
 
 	if (dbus_message_is_signal (message, DBUS_INTERFACE_LOCAL, "Disconnected")) {
 
@@ -509,7 +503,7 @@ __browser_filter_func (IN DBusConnection *connection,
 }//
 
 void
-__browser_handle_message(IN DBusMessage *msg, IN browserParams *bp) {
+__browser_handle_message(DBusMessage *msg, browserParams *bp) {
 
 	int mtype = dbus_message_get_type(msg);
 	DBGBEGIN
