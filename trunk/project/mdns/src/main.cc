@@ -31,8 +31,6 @@ int main(int argc, char *argv[]) {
 		if (result)
 			continue;
 
-		printf("msg waiting...");
-
 		msg = (BMsg*) queue_get_nb(q);
 		if (NULL==msg)
 			continue;
