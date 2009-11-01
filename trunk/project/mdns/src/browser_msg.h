@@ -76,6 +76,14 @@
 			return type==BMSG_RECONNECT;
 		}
 
+		 std::string getJsonString(void) {
+			std::stringbuf *sbuf;
+			std:string st;
+			sbuf=json_string->rdbuf();
+			st=sbuf->str();
+			return st;
+		}
+
 	};
 
 
