@@ -117,6 +117,7 @@ browser_init(CommChannel *cc) {
 	if (NULL==bp)
 		goto exit;
 
+	//not sure this is really needed... but can't hurt.
 	bzero(bp, sizeof(browserParams));
 
 	//if this fails, we aint' going far anyway...
