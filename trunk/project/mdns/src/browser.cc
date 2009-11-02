@@ -310,8 +310,12 @@ run_fsm(browserParams *bp) {
 					fc.state = currentState;
 					fc.event = currentEvent;
 
-					//DBGMSG("=> dispatching to action, state=%i, event=%i\n", ts, te);
-					re = (*action)(&fc);
+					//DBGMSG("=> dispatching to action=%i, state=%i, event=%i\n", action, ts, te);
+					if (NULL!=action)
+						re = (*action)(&fc);
+					else {
+						re = E_NULL;
+					}
 					currentState = ns; //new "current" state
 					break;
 				}
@@ -390,7 +394,6 @@ ActionExit(FsmContext *c) {
 
 	// We won't be needing DBus either way
 	if (NULL!=c->bp->conn) {
-		dbus_connection_close(c->bp->conn);
 		dbus_connection_unref(c->bp->conn);
 		c->bp->conn=NULL;
 	}
@@ -530,7 +533,7 @@ __browser_setup_dbus_conn(browserParams **bp) {
 fail:
 
 	if (conn) {
-		dbus_connection_close(conn);
+		dbus_connection_unref(conn);
 	}
 	(*bp)->conn=NULL;
 
