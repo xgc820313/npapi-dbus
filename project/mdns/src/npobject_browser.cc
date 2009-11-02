@@ -35,36 +35,27 @@ void NPBrowser::_NPDeallocate(NPObject *obj) {
 bool NPBrowser::_NPHasMethod(NPObject *obj, NPIdentifier name) {
 	return ((NPBrowser*)obj)->HasMethod(name);
 }
-
 bool NPBrowser::_NPInvoke(NPObject *obj, NPIdentifier name, const NPVariant *args, uint32_t argCount,NPVariant *result) {
 	return ((NPBrowser*)obj)->Invoke(name, args, argCount, result);
 }
-
 bool NPBrowser::_NPInvokeDefault(NPObject *obj,const NPVariant *args,uint32_t argCount,NPVariant *result) {
 	return ((NPBrowser*)obj)->InvokeDefault(args, argCount, result);
 }
-
-
 bool NPBrowser::_NPHasProperty(NPObject *obj, NPIdentifier name) {
 	return ((NPBrowser*)obj)->HasProperty(name);
 }
-
 bool NPBrowser::_NPGetProperty(NPObject *obj, NPIdentifier name,NPVariant *result) {
 	return ((NPBrowser*)obj)->GetProperty(name, result);
 }
-
 bool NPBrowser::_NPSetProperty(NPObject *obj, NPIdentifier name,const NPVariant *value) {
 	return ((NPBrowser*)obj)->SetProperty(name, value);
 }
-
 bool NPBrowser::_NPRemoveProperty(NPObject *obj,NPIdentifier name) {
 	return ((NPBrowser*)obj)->RemoveProperty(name);
 }
-
 bool NPBrowser::_NPEnumeration(NPObject *obj, NPIdentifier **value,uint32_t *count) {
     return ((NPBrowser*)obj)->Enumeration(value, count);
 }
-
 bool NPBrowser::_NPConstruct(NPObject *obj,const NPVariant *args,uint32_t argCount,NPVariant *result) {
     return ((NPBrowser*)obj)->Construct(args, argCount, result);
 }
@@ -77,7 +68,7 @@ bool NPBrowser::_NPConstruct(NPObject *obj,const NPVariant *args,uint32_t argCou
 
 
 NPBrowser::NPBrowser(NPP npp) {
-
+	m_Instance=npp;
 }//
 
 NPBrowser::~NPBrowser() {
