@@ -42,7 +42,11 @@
 
 			//From Client
 			BMSG_RECONNECT=11,
-			BMSG_EXIT=12
+			BMSG_EXIT=12,
+			BMSG_EXIT_CLEAN=13,
+
+			//Management
+			BMSG_FLUSH_MARKER=14
 		} BMsgType;
 
 	public:

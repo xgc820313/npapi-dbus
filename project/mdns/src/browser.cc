@@ -3,6 +3,13 @@
  *
  * @date 2009-10-28
  * @author jldupont
+ *
+ * IMPORTANT NOTE:
+ * ===============
+ * Once the client user of this class sends an "exit & clean"
+ * command msg, the said client shouldn't be using the message
+ * queues either way.
+ *
  */
 #include <stdio.h>
 #include <string.h>
@@ -37,7 +44,13 @@ typedef enum {
 		E_CONNECT_OK,
 		E_CONNECT_ERROR,
 		E_CMD_RECONNECT,
-		E_CMD_EXIT
+		E_CMD_EXIT,
+		E_CMD_EXIT_CLEAN,
+		E_PUSHED_MARKERS,
+		E_FLUSH_MARKER,
+		E_MARKER,
+		E_MARKERS,
+		E_QUIT,
 	} FsmEvent;
 
 typedef enum {
@@ -46,9 +59,41 @@ typedef enum {
 		ST_SERVE,
 		ST_WAIT,
 		ST_EXIT,
+
+		ST_WMARK1,
+		ST_WMARK2,
+		ST_QUIT,
 		//======
 		ST_TRAP,
 	} FsmState;
+
+const char *Events[] = {
+		"E_NULL",
+		"E_ANY",
+		"E_DBUS_DISCONNECT",
+		"E_CONNECT_OK",
+		"E_CONNECT_ERROR",
+		"E_CMD_RECONNECT",
+		"E_CMD_EXIT",
+		"E_CMD_EXIT_CLEAN",
+		"E_PUSHED_MARKERS",
+		"E_FLUSH_MARKER",
+		"E_MARKER",
+		"E_MARKERS",
+		"E_QUIT",
+};
+
+const char *States[] = {
+		"ST_START",
+		"ST_CONNECT",
+		"ST_SERVE",
+		"ST_WAIT",
+		"ST_EXIT",
+		"ST_WMARK1",
+		"ST_WMARK2",
+		"ST_QUIT",
+		"ST_TRAP",
+};
 
 typedef struct {
 		FsmState state;
@@ -62,6 +107,7 @@ typedef FsmEvent StateFn(FsmContext *c);
 
 //prototypes
 StateFn ActionConnect, ActionServe, ActionWait, ActionExit;
+StateFn ActionWaitMarkers1, ActionWaitMarkers2;
 
 
 typedef struct {
@@ -83,11 +129,26 @@ TransitionElement TransitionTable[] = {
 
 		{ST_SERVE,   E_DBUS_DISCONNECT, ST_WAIT,    &ActionWait},
 		{ST_SERVE,   E_CMD_EXIT,        ST_EXIT,    &ActionExit},
+		{ST_SERVE,   E_CMD_EXIT_CLEAN,  ST_EXIT,    &ActionExit},
 		{ST_SERVE,   E_ANY,             ST_SERVE,   &ActionServe},
 
 		{ST_WAIT,    E_CMD_RECONNECT,   ST_CONNECT, &ActionConnect},
 		{ST_WAIT,    E_CMD_EXIT,        ST_EXIT,    &ActionExit},
+		{ST_WAIT,    E_CMD_EXIT_CLEAN,  ST_EXIT,    &ActionExit},
 		{ST_WAIT,    E_ANY,             ST_WAIT,    &ActionWait},
+
+		{ST_EXIT,    E_QUIT,            ST_QUIT,    NULL},
+		{ST_EXIT,    E_PUSHED_MARKERS,  ST_WMARK1,  &ActionWaitMarkers1},
+		{ST_EXIT,    E_ANY,             ST_QUIT,    NULL},
+
+		{ST_WMARK1,  E_QUIT,            ST_QUIT,    NULL},
+		{ST_WMARK1,  E_MARKER,          ST_WMARK2,  &ActionWaitMarkers2},
+		{ST_WMARK1,  E_MARKERS,         ST_QUIT,    NULL},
+
+		{ST_WMARK2,  E_MARKER,          ST_QUIT,    NULL},
+		{ST_WMARK2,  E_MARKERS,         ST_QUIT,    NULL},  //shouldn't occur
+		{ST_WMARK2,  E_QUIT,            ST_QUIT,    NULL},
+		{ST_WMARK2,  E_ANY,             ST_WMARK2,  &ActionWaitMarkers2},
 
 		{ST_TRAP,    E_ANY,             ST_CONNECT, &ActionConnect}
 };
@@ -169,7 +230,7 @@ event_pump(browserParams *bp) {
 
 	// connected on DBus yet?
 	if (NULL!=conn) {
-		if (dbus_connection_read_write_dispatch(conn, 100 /*timeout*/))
+		if (!dbus_connection_read_write_dispatch(conn, 100 /*timeout*/))
 			return E_DBUS_DISCONNECT;
 	}
 
@@ -187,6 +248,12 @@ event_pump(browserParams *bp) {
 		break;
 	case BMsg::BMSG_EXIT:
 		ret=E_CMD_EXIT;
+		break;
+	case BMsg::BMSG_EXIT_CLEAN:
+		ret=E_CMD_EXIT_CLEAN;
+		break;
+	case BMsg::BMSG_FLUSH_MARKER:
+		ret=E_FLUSH_MARKER;
 		break;
 	default:
 		ret=E_NULL;
@@ -221,6 +288,13 @@ run_fsm(browserParams *bp) {
 		if (E_NULL==re)
 			currentEvent = event_pump(bp);
 
+		static FsmState lastState=ST_START;
+
+		if (currentState!=lastState)
+			DBGMSG(">> State: %s, Event: %s\n", States[currentState], Events[currentEvent]);
+
+		lastState=currentState;
+
 		for (int i=0; i<tcount;i++) {
 			FsmState ts = TransitionTable[i].current_state;
 			FsmState ns = TransitionTable[i].next_state;
@@ -245,7 +319,7 @@ run_fsm(browserParams *bp) {
 
 		}//for
 
-	} while(currentState != ST_EXIT);
+	} while(currentState != ST_QUIT);
 }//
 
 
@@ -314,15 +388,87 @@ ActionWait(FsmContext *c) {
 FsmEvent
 ActionExit(FsmContext *c) {
 
+	// We won't be needing DBus either way
+	if (NULL!=c->bp->conn) {
+		dbus_connection_close(c->bp->conn);
+		dbus_connection_unref(c->bp->conn);
+		c->bp->conn=NULL;
+	}
+
 	//push exit message back to the Client
 	browser_push_simple_msg(c->bp, BMsg::BMSG_EXITED);
 
-	return E_CMD_EXIT;
+	// We push the FLUSH markers down both queues:
+	// The client shouldn't be using the queues anyhow so
+	// collision shouldn't happen.
+	if (E_CMD_EXIT_CLEAN==c->event) {
+		browser_push_simple_msg(c->bp->cc->out, BMsg::BMSG_FLUSH_MARKER);
+		browser_push_simple_msg(c->bp->cc->in, BMsg::BMSG_FLUSH_MARKER);
+
+		return E_PUSHED_MARKERS;
+	}
+
+	return E_QUIT;
 }//
 
+FsmEvent
+FlushQueues(FsmContext *c) {
+	int markerCount=0;
 
+	int mtype1=BMsg::BMSG_INVALID;
+	int mtype2=BMsg::BMSG_INVALID;
 
+	BMsg *msg1= (BMsg *) queue_get_nb(c->bp->cc->in);
+	if (NULL!=msg1) {
+		mtype1=msg1->type;
+	}
 
+	BMsg *msg2= (BMsg *) queue_get_nb(c->bp->cc->out);
+	if (NULL!=msg2) {
+		mtype2=msg2->type;
+	}
+
+	if (BMsg::BMSG_FLUSH_MARKER==mtype1) {
+		markerCount++;
+	}
+
+	if (BMsg::BMSG_FLUSH_MARKER==mtype2) {
+		markerCount++;
+	}
+
+	if (NULL!=msg1) delete msg1;
+	if (NULL!=msg2)	delete msg2;
+
+	FsmEvent ret;
+
+	switch(markerCount) {
+	case 1:
+		ret=E_MARKER;
+		break;
+	case 2:
+		ret=E_MARKERS;
+		break;
+
+	case 0:
+	default:
+		ret=E_NULL;
+		break;
+	}
+
+	return ret;
+}//
+
+FsmEvent
+ActionWaitMarkers1(FsmContext *c) {
+
+	return FlushQueues(c);
+}//
+
+FsmEvent
+ActionWaitMarkers2(FsmContext *c) {
+
+	return FlushQueues(c);
+}//
 
 // ============================================================================================
 // ============================================================================================
@@ -407,7 +553,12 @@ __browser_thread_function(void *bp) {
 
 	//the field 'cc' of the browserParams struct
 	//needs to be taken care of by the original caller.
-	free((browserParams *)bp);
+
+	// Don't clean browserParams just yet
+	// as it contains the pthread_t context!
+	// We are exiting the thread anyways; the OS will
+	// reclaim what it will.
+	//free((browserParams *)bp);
 
 	return NULL;
 }//

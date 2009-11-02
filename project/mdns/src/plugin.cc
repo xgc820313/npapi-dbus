@@ -88,6 +88,9 @@ NP_Shutdown() {
   return NPERR_NO_ERROR;
 }
 
+/**
+ * New plugin instance
+ */
 NPError
 NPP_New(NPMIMEType pluginType, NPP instance, uint16_t mode, int16_t argc, char* argn[], char* argv[], NPSavedData* saved) {
 
@@ -104,7 +107,7 @@ NPP_New(NPMIMEType pluginType, NPP instance, uint16_t mode, int16_t argc, char* 
   browserParams *bp=NULL;
   //int result=browser_init( &bp );
 
-  instanceData->init_result_code = result;
+  //instanceData->init_result_code = result;
   instanceData->bp = bp;
 
   return NPERR_NO_ERROR;

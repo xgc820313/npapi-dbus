@@ -4,6 +4,7 @@
  *  Created on: 2009-10-28
  *      Author: jldupont
  */
+#include <unistd.h>
 #include "browser.h"
 #include "browser_msg.h"
 
@@ -25,8 +26,13 @@ int main(int argc, char *argv[]) {
 	//shortcut
 	q=cc->out;
 
+	int cycles=0;
+
 	printf("> entering loop, q=%i\n", q);
 	do {
+		cycles++;
+		if (100==cycles) break;
+
 		result=queue_wait_timer(q, 1000*100);
 		if (result)
 			continue;
@@ -48,6 +54,9 @@ int main(int argc, char *argv[]) {
 		delete msg;
 
 	} while(1);
+
+	browser_push_simple_msg(cc->in, BMsg::BMSG_EXIT_CLEAN);
+	sleep(10);
 
 	return 0;
 }//
