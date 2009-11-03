@@ -42,6 +42,11 @@ MDNSBrowser::init(void) {
 void
 MDNSBrowser::release(void) {
 
+	if (NULL==cc) {
+		DBGLOG(LOG_ERR, "MDNSBrowser: communication channel no up!");
+		return;
+	}
+
 	pushMsg( BMsg::BMSG_EXIT_CLEAN );
 
 }//

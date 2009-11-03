@@ -5,8 +5,11 @@
  *      Author: jldupont
  */
 
+#include <string.h>
+#include <stdlib.h>
 #include "npobject_browser.h"
 
+#define POPMSG_METHOD  "popmsg"
 
 NPClass NPBrowser::_npclass = {
     NP_CLASS_STRUCT_VERSION,
@@ -69,15 +72,16 @@ bool NPBrowser::_NPConstruct(NPObject *obj,const NPVariant *args,uint32_t argCou
 
 NPBrowser::NPBrowser(NPP npp) {
 	m_Instance=npp;
+	mb=NULL;
 }//
 
-NPBrowser::~NPBrowser() {
-
-}
-
+NPBrowser::~NPBrowser() {}
 
 void NPBrowser::Deallocate() {
-    // Do any cleanup needed
+    if (NULL!=mb) {
+    	mb->release();
+    	delete mb;
+    }
 }
 
 void NPBrowser::Invalidate() {
@@ -86,11 +90,29 @@ void NPBrowser::Invalidate() {
 
 bool NPBrowser::HasMethod(NPIdentifier name) {
 
+	NPUTF8 *nname = NPN_UTF8FromIdentifier(name);
+
+	bool result=(strcmp(POPMSG_METHOD, nname)==0);
+
+	NPN_MemFree(nname);
+
+	return result;
 }
 
 bool NPBrowser::Invoke(NPIdentifier name, const NPVariant *args, uint32_t argCount, NPVariant *result) {
 
-}
+	NPUTF8 *nname = NPN_UTF8FromIdentifier(name);
+
+	// only "popmsg" method is supported.
+	bool result=(strcmp(POPMSG_METHOD, nname)==0);
+	NPN_MemFree(nname);
+
+	if (!result)
+		return false;
+
+
+	return true;
+}//
 
 bool NPBrowser::InvokeDefault(const NPVariant *args, uint32_t argCount, NPVariant *result) {
 

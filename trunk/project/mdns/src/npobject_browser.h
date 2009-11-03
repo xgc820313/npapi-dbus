@@ -10,26 +10,8 @@
 
   #include "npapi.h"
   #include "npruntime.h"
+  #include "mdnsbrowser.h"
 
-/*
- struct NPClass
-{
-    uint32_t structVersion;
-    NPAllocateFunctionPtr allocate;
-    NPDeallocateFunctionPtr deallocate;
-    NPInvalidateFunctionPtr invalidate;
-    NPHasMethodFunctionPtr hasMethod;
-    NPInvokeFunctionPtr invoke;
-    NPInvokeDefaultFunctionPtr invokeDefault;
-    NPHasPropertyFunctionPtr hasProperty;
-    NPGetPropertyFunctionPtr getProperty;
-    NPSetPropertyFunctionPtr setProperty;
-    NPRemovePropertyFunctionPtr removeProperty;
-    NPEnumerationFunctionPtr enumerate;
-    NPConstructFunctionPtr construct;
-};
-
- */
 
   class NPBrowser: public NPObject {
 
@@ -79,6 +61,7 @@
 
   protected:
       NPP m_Instance;
+      MDNSBrowser *mb;
   };
 
 #endif /* NPOBJECT_BROWSER_H_ */
