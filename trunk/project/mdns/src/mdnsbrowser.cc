@@ -75,6 +75,11 @@ MDNSBrowser::pushMsg(BMsg *msg) {
 BMsg *
 MDNSBrowser::popMsg(void) {
 
+	if (!initState) {
+		BMsg *msg=new BMsg(BMsg::BMSG_INIT_ERROR);
+		return msg;
+	}
+
 	if (NULL==cc) {
 		DBGLOG(LOG_ERR, "MDNSBrowser: communication channel down.");
 		return NULL;
