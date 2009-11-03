@@ -26,21 +26,6 @@
 
 static NPNetscapeFuncs* sBrowserFuncs = NULL;
 
-
-namespace
-{
-    class dynamic_library_load_unload_handler
-    {
-         public:
-              dynamic_library_load_unload_handler(){
-                    //DBGLOG(LOG_INFO, "loaded!");
-              }
-              ~dynamic_library_load_unload_handler(){
-                    //DBGLOG(LOG_INFO, "unloaded!");
-              }
-    } dynamic_library_load_unload_handler_hook;
-}
-
 static void
 fillPluginFunctionTable(NPPluginFuncs* pFuncs)
 {
@@ -110,8 +95,6 @@ NP_Shutdown() {
 NPError
 NPP_New(NPMIMEType pluginType, NPP instance, uint16_t mode, int16_t argc, char* argn[], char* argv[], NPSavedData* saved) {
 
-	//DBGLOG(LOG_INFO, "NPP_New");
-
 	sBrowserFuncs->setvalue(instance, NPPVpluginWindowBool, (void*)false);
 
 	// set up our our instance data
@@ -126,8 +109,6 @@ NPP_New(NPMIMEType pluginType, NPP instance, uint16_t mode, int16_t argc, char* 
 
 	instanceData->npo=NULL;
 	instanceData->sBrowserFuncs = sBrowserFuncs;
-
-	//DBGLOG(LOG_INFO, "NPP_New - end");
 
 	return NPERR_NO_ERROR;
 }
