@@ -12,7 +12,7 @@
 #include "plugin.h"
 #include "mdnsbrowser.h"
 
-#define POPMSG_METHOD  "popmsg"
+#define POPMSG_METHOD    "popmsg"
 
 NPClass NPBrowser::_npclass = {
     NP_CLASS_STRUCT_VERSION,
@@ -104,7 +104,11 @@ bool NPBrowser::HasMethod(NPIdentifier name) {
 
 	InstanceData* instanceData = (InstanceData *)m_Instance->pdata;
 	NPUTF8 *nname = (*instanceData->sBrowserFuncs->utf8fromidentifier)(name);
-	bool result=(strcmp(POPMSG_METHOD, nname)==0);
+
+	// only "popmsg" method is supported.
+	// **********************************
+	bool result=(strcmp(POPMSG_METHOD,    nname)==0);
+
 	(*instanceData->sBrowserFuncs->memfree)(nname);
 
 	return result;
@@ -112,13 +116,11 @@ bool NPBrowser::HasMethod(NPIdentifier name) {
 
 bool NPBrowser::Invoke(NPIdentifier name, const NPVariant *args, uint32_t argCount, NPVariant *result) {
 
-	DBGLOG(LOG_INFO, "NPBroser::Invoke");
+	//DBGLOG(LOG_INFO, "NPBroser::Invoke");
 
 	InstanceData* instanceData = (InstanceData *)m_Instance->pdata;
 
 	NPUTF8 *nname = (*instanceData->sBrowserFuncs->utf8fromidentifier)(name);
-
-	// only "popmsg" method is supported.
 
 	bool r=(strcmp(POPMSG_METHOD, nname)==0);
 	(*instanceData->sBrowserFuncs->memfree)(nname);
@@ -137,21 +139,23 @@ bool NPBrowser::Invoke(NPIdentifier name, const NPVariant *args, uint32_t argCou
 		return true;
 	}
 
-	if (BMsg::BMSG_JSON!=msg->type) {
-		INT32_TO_NPVARIANT(msg->type, *result);
-		return true;
+	//DBGLOG(LOG_INFO, "mtype: %i", msg->type);
+
+	char *pstr;
+
+	if (BMsg::BMSG_JSON==msg->type) {
+		std:string jsonStr;
+
+		jsonStr=msg->getJsonString();
+		pstr = (char *) malloc(jsonStr.length()+1);
+		strcpy(pstr, jsonStr.data());
+	} else {
+		const char *tt = msg->translateType();
+		pstr=(char *) malloc(strlen(tt));
+		strcpy(pstr, tt);
 	}
 
-
-	std:string jsonStr;
-
-	jsonStr=msg->getJsonString();
-
-	char *pstr = (char *) malloc(sizeof(jsonStr)+1);
-
-	strcpy(pstr, jsonStr.data());
 	delete msg;
-
 	STRINGZ_TO_NPVARIANT(pstr, *result);
 
 	return true;

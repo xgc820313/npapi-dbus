@@ -663,7 +663,7 @@ __browser_filter_func (IN DBusConnection *connection,
 						IN DBusMessage   *message,
 						IN void          *_bp)
 {
-	DBGLOG(LOG_INFO, "ingress_filter_func, conn: %i  message: %i", connection, message);
+	//DBGLOG(LOG_INFO, "ingress_filter_func, conn: %i  message: %i", connection, message);
 
 	if (dbus_message_is_signal (message, DBUS_INTERFACE_LOCAL, "Disconnected")) {
 

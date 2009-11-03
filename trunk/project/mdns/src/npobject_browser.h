@@ -3,6 +3,9 @@
  *
  *  Created on: 2009-11-01
  *      Author: jldupont
+ *
+ * The NPAPI NPObject class hosting
+ * the "Service Browser" object instance
  */
 
 #ifndef NPOBJECT_BROWSER_H_

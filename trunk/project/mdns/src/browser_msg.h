@@ -29,26 +29,30 @@
 		typedef enum {
 			//From Browser to Client
 			BMSG_INVALID=0,
-			BMSG_JSON=1,
-			BMSG_MALLOC_ERROR=2,
-			BMSG_DBUS_CONN_ERROR=3,
-			BMSG_DBUS_ADDFILTER_ERROR=4,
-			BMSG_DBUS_ADDMATCH_ERROR=5,
-			BMSG_DBUS_SERVICE_BROWSER_ERROR=6,
-			BMSG_DBUS_DISCONNECTED=7,
-			BMSG_ALLFORNOW=8,
-			BMSG_CACHEEXHAUSTED=9,
-			BMSG_EXITED=10,
-			BMSG_INIT_ERROR=11,
+			BMSG_JSON,
+			BMSG_MALLOC_ERROR,
+			BMSG_DBUS_CONN_ERROR,
+			BMSG_DBUS_ADDFILTER_ERROR,
+			BMSG_DBUS_ADDMATCH_ERROR,
+			BMSG_DBUS_SERVICE_BROWSER_ERROR,
+			BMSG_DBUS_DISCONNECTED,
+			BMSG_ALLFORNOW,
+			BMSG_CACHEEXHAUSTED,
+			BMSG_EXITED,
+			BMSG_INIT_ERROR,
 
 			//From Client
-			BMSG_RECONNECT=20,
-			BMSG_EXIT=21,
-			BMSG_EXIT_CLEAN=22,
+			BMSG_RECONNECT,
+			BMSG_EXIT,
+			BMSG_EXIT_CLEAN,
 
 			//Management
-			BMSG_FLUSH_MARKER=100
+			BMSG_FLUSH_MARKER,
+
+			BMSG_LAST_MESSAGE
 		} BMsgType;
+
+		static const char *strTypes[BMSG_LAST_MESSAGE+1];
 
 	public:
 		BMsgType type;
@@ -71,6 +75,16 @@
 		~BMsg() {
 			if (NULL!=json_string)
 				delete json_string;
+		}
+		const char *translateType(void) {
+			translateType(type);
+		}
+
+		const char *translateType(BMsgType type) {
+			if (0>type) return NULL;
+			if ((sizeof(strTypes)/sizeof(const char *))<type) return NULL;
+
+			return strTypes[type];
 		}
 
 		bool isExit(void) {
