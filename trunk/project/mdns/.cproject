@@ -813,6 +813,8 @@
 <listOptionValue builtIn="false" value="/usr/include/xulrunner-1.9.1.4/stable"/>
 </option>
 <option id="gnu.cpp.compiler.option.warnings.nowarn.1854740417" name="Inhibit all warnings (-w)" superClass="gnu.cpp.compiler.option.warnings.nowarn" value="true" valueType="boolean"/>
+<option id="gnu.cpp.compiler.option.debugging.other.420311834" name="Other debugging flags" superClass="gnu.cpp.compiler.option.debugging.other" value="" valueType="string"/>
+<option id="gnu.cpp.compiler.option.optimization.flags.532182420" name="Other optimization flags" superClass="gnu.cpp.compiler.option.optimization.flags" value="-fPIC" valueType="string"/>
 <inputType id="cdt.managedbuild.tool.gnu.cpp.compiler.input.1413153760" superClass="cdt.managedbuild.tool.gnu.cpp.compiler.input"/>
 </tool>
 <tool id="cdt.managedbuild.tool.gnu.cross.cpp.linker.103446920" name="Cross G++ Linker" superClass="cdt.managedbuild.tool.gnu.cross.cpp.linker">
