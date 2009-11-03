@@ -34,10 +34,12 @@
 <tool id="cdt.managedbuild.tool.gnu.cross.cpp.linker.740421" name="Cross G++ Linker" superClass="cdt.managedbuild.tool.gnu.cross.cpp.linker">
 <option id="gnu.cpp.link.option.libs.899234318" name="Libraries (-l)" superClass="gnu.cpp.link.option.libs" valueType="libs">
 <listOptionValue builtIn="false" value="pthread"/>
+<listOptionValue builtIn="false" value="sqlite3"/>
+<listOptionValue builtIn="false" value="xul"/>
 <listOptionValue builtIn="false" value="dbus-1"/>
 </option>
 <option id="gnu.cpp.link.option.paths.660650779" name="Library search path (-L)" superClass="gnu.cpp.link.option.paths" valueType="libPaths">
-<listOptionValue builtIn="false" value="//lib"/>
+<listOptionValue builtIn="false" value="//usr/lib/xulrunner-1.9.1.4"/>
 </option>
 <option defaultValue="true" id="gnu.cpp.link.option.shared.1504081429" name="Shared (-shared)" superClass="gnu.cpp.link.option.shared" valueType="boolean"/>
 <inputType id="cdt.managedbuild.tool.gnu.cpp.linker.input.1861798660" superClass="cdt.managedbuild.tool.gnu.cpp.linker.input">
@@ -416,6 +418,15 @@
 <inputType id="cdt.managedbuild.tool.gnu.cpp.compiler.input.638182607" superClass="cdt.managedbuild.tool.gnu.cpp.compiler.input"/>
 </tool>
 <tool id="cdt.managedbuild.tool.gnu.cross.cpp.linker.795569387" name="Cross G++ Linker" superClass="cdt.managedbuild.tool.gnu.cross.cpp.linker">
+<option id="gnu.cpp.link.option.paths.271447440" name="Library search path (-L)" superClass="gnu.cpp.link.option.paths" valueType="libPaths">
+<listOptionValue builtIn="false" value="//usr/lib/xulrunner-1.9.1.4"/>
+</option>
+<option id="gnu.cpp.link.option.libs.1197546969" name="Libraries (-l)" superClass="gnu.cpp.link.option.libs" valueType="libs">
+<listOptionValue builtIn="false" value="pthread"/>
+<listOptionValue builtIn="false" value="sqlite3"/>
+<listOptionValue builtIn="false" value="xul"/>
+<listOptionValue builtIn="false" value="dbus-1"/>
+</option>
 <inputType id="cdt.managedbuild.tool.gnu.cpp.linker.input.1261609683" superClass="cdt.managedbuild.tool.gnu.cpp.linker.input">
 <additionalInput kind="additionalinputdependency" paths="$(USER_OBJS)"/>
 <additionalInput kind="additionalinput" paths="$(LIBS)"/>
@@ -784,7 +795,7 @@
 </extensions>
 </storageModule>
 <storageModule moduleId="cdtBuildSystem" version="4.0.0">
-<configuration artifactName="npapi-mdns" buildArtefactType="org.eclipse.cdt.build.core.buildArtefactType.exe" buildProperties="org.eclipse.cdt.build.core.buildType=org.eclipse.cdt.build.core.buildType.debug,org.eclipse.cdt.build.core.buildArtefactType=org.eclipse.cdt.build.core.buildArtefactType.exe" cleanCommand="rm -rf" description="" id="cdt.managedbuild.config.gnu.cross.exe.debug.2013324748.1406367786" name="Test" parent="cdt.managedbuild.config.gnu.cross.exe.debug">
+<configuration artifactExtension="so" artifactName="npapi-mdns" buildArtefactType="org.eclipse.cdt.build.core.buildArtefactType.sharedLib" buildProperties="org.eclipse.cdt.build.core.buildType=org.eclipse.cdt.build.core.buildType.debug,org.eclipse.cdt.build.core.buildArtefactType=org.eclipse.cdt.build.core.buildArtefactType.sharedLib" cleanCommand="rm -rf" description="" id="cdt.managedbuild.config.gnu.cross.exe.debug.2013324748.1406367786" name="Test" parent="cdt.managedbuild.config.gnu.cross.exe.debug">
 <folderInfo id="cdt.managedbuild.config.gnu.cross.exe.debug.2013324748.1406367786." name="/" resourcePath="">
 <toolChain id="cdt.managedbuild.toolchain.gnu.cross.exe.debug.1317470787" name="Cross GCC" superClass="cdt.managedbuild.toolchain.gnu.cross.exe.debug">
 <targetPlatform archList="all" binaryParser="org.eclipse.cdt.core.ELF" id="cdt.managedbuild.targetPlatform.gnu.cross.513633327" isAbstract="false" osList="all" superClass="cdt.managedbuild.targetPlatform.gnu.cross"/>
@@ -812,7 +823,7 @@
 <option id="gnu.cpp.link.option.paths.257886092" name="Library search path (-L)" superClass="gnu.cpp.link.option.paths" valueType="libPaths">
 <listOptionValue builtIn="false" value="//lib"/>
 </option>
-<option id="gnu.cpp.link.option.shared.2090470212" name="Shared (-shared)" superClass="gnu.cpp.link.option.shared"/>
+<option defaultValue="true" id="gnu.cpp.link.option.shared.2090470212" name="Shared (-shared)" superClass="gnu.cpp.link.option.shared" valueType="boolean"/>
 <inputType id="cdt.managedbuild.tool.gnu.cpp.linker.input.1573671060" superClass="cdt.managedbuild.tool.gnu.cpp.linker.input">
 <additionalInput kind="additionalinputdependency" paths="$(USER_OBJS)"/>
 <additionalInput kind="additionalinput" paths="$(LIBS)"/>

@@ -13,6 +13,7 @@
 #include <string.h>
 #include <stdio.h>
 
+#include "npapi.h"
 #include "plugin.h"
 #include "npobject_browser.h"
 

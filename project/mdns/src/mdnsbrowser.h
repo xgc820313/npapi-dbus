@@ -19,8 +19,6 @@
 
 	public:
 		MDNSBrowser();
-
-	protected:
 		~MDNSBrowser();
 
 	public:
