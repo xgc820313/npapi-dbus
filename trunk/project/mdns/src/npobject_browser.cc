@@ -104,12 +104,17 @@ bool NPBrowser::Invoke(NPIdentifier name, const NPVariant *args, uint32_t argCou
 	NPUTF8 *nname = NPN_UTF8FromIdentifier(name);
 
 	// only "popmsg" method is supported.
-	bool result=(strcmp(POPMSG_METHOD, nname)==0);
+	bool r=(strcmp(POPMSG_METHOD, nname)==0);
 	NPN_MemFree(nname);
 
-	if (!result)
+	if (!r)
 		return false;
 
+	char str[] = "json response";
+	char *pstr = (char *) malloc(sizeof(str)+1);
+	strcpy(pstr, str);
+
+	STRINGZ_TO_NPVARIANT(pstr, *result);
 
 	return true;
 }//
