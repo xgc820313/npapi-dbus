@@ -50,4 +50,6 @@
 	BrowserReturnCode browser_init(CommChannel *cc);
 
 
+
+
 #endif /* BROWSER_H_ */

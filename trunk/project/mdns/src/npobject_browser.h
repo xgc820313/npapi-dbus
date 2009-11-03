@@ -34,12 +34,12 @@
   class NPBrowser: public NPObject {
 
   public:
-	  NPBrowser(NPP npp);
-	  NPBrowser();
 	  virtual ~NPBrowser();
 
-
   protected:
+	  NPBrowser(NPP npp);
+	  NPBrowser();
+
 	  void Deallocate(void);
 	  void Invalidate(void);
 	  bool HasMethod(NPIdentifier name);
@@ -65,7 +65,6 @@
 	   * NPClass interface
 	   */
 	  static NPObject *(*_NPAllocateFunctionPtr)(NPP npp, NPClass *aClass);
-
 	  static void _NPDeallocate(NPObject *npobj);
 	  static void _NPInvalidate(NPObject *npobj);
 	  static bool _NPHasMethod(NPObject *npobj, NPIdentifier name);

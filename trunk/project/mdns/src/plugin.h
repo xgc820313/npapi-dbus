@@ -14,15 +14,14 @@
    #include <pthread.h>
    #include "dbus/dbus.h"
 
-	#include "browser.h"
+	#include "mdnsbrowser.h"
 
 
 	// For each plugin instance
 	typedef struct InstanceData {
 	  NPP npp;
 	  NPWindow window;
-	  browserParams *bp;
-	  int init_result_code;
+	  NPObject *npo;
 	} InstanceData;
 
 

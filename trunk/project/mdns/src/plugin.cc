@@ -14,11 +14,13 @@
 #include <stdio.h>
 
 #include "plugin.h"
+#include "npobject_browser.h"
 
 
 #define PLUGIN_NAME        "DBus-mdns adapter"
 #define PLUGIN_DESCRIPTION PLUGIN_NAME " Serves as 'dbus-mdns ServiceBrowser for discovering HTTP services"
 #define PLUGIN_VERSION     "1.0.0.0"
+#define PLUGIN_MIME        "application/dbus-mdns:dbmdns:dbus-mdns"
 
 static NPNetscapeFuncs* sBrowserFuncs = NULL;
 
@@ -64,7 +66,7 @@ NP_GetPluginVersion()
 NP_EXPORT(char*)
 NP_GetMIMEDescription()
 {
-  return "application/dbus-mdns:dbmdns:dbus-mdns";
+  return PLUGIN_MIME;
 }
 
 NP_EXPORT(NPError)
@@ -100,15 +102,12 @@ NPP_New(NPMIMEType pluginType, NPP instance, uint16_t mode, int16_t argc, char* 
   InstanceData* instanceData = (InstanceData*)malloc(sizeof(InstanceData));
   if (!instanceData)
     return NPERR_OUT_OF_MEMORY_ERROR;
+
   memset(instanceData, 0, sizeof(InstanceData));
   instanceData->npp = instance;
   instance->pdata = instanceData;
 
-  browserParams *bp=NULL;
-  //int result=browser_init( &bp );
-
-  //instanceData->init_result_code = result;
-  instanceData->bp = bp;
+  instanceData->npo=NULL;
 
   return NPERR_NO_ERROR;
 }
@@ -116,6 +115,9 @@ NPP_New(NPMIMEType pluginType, NPP instance, uint16_t mode, int16_t argc, char* 
 NPError
 NPP_Destroy(NPP instance, NPSavedData** save) {
   InstanceData* instanceData = (InstanceData*)(instance->pdata);
+
+  // @TODO
+
   free(instanceData);
   return NPERR_NO_ERROR;
 }
@@ -153,7 +155,30 @@ void NPP_URLNotify(NPP instance, const char* URL, NPReason reason, void* notifyD
 
 NPError
 NPP_GetValue(NPP instance, NPPVariable variable, void *value) {
-  return NPERR_GENERIC_ERROR;
+
+	InstanceData *instanceData = (InstanceData*)(instance->pdata);
+
+	NPError rv = NPERR_NO_ERROR;
+	switch(variable) {
+	case NPPVpluginNameString:
+		value = *((char **)value) = PLUGIN_NAME;
+		break;
+	case NPPVpluginDescriptionString:
+		*((char **)value) = PLUGIN_DESCRIPTION;
+		break;
+	case NPPVpluginScriptableNPObject:
+		if (NULL!=instanceData->npo) {
+		  *(NPObject **)value = instanceData->npo;
+		} else {
+			instanceData->npo = NPN_CreateObject(instance, &NPBrowser::_npclass);
+			*(NPObject **)value = instanceData->npo;
+		}
+		break;
+	default:
+		rv = NPERR_GENERIC_ERROR;
+	}
+
+	return rv;
 }
 
 NPError
