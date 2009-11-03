@@ -22,7 +22,6 @@
 	  NPBrowser(NPP npp);
 	  NPBrowser();
 
-	  void Deallocate(void);
 	  void Invalidate(void);
 	  bool HasMethod(NPIdentifier name);
 	  bool Invoke(NPIdentifier name, const NPVariant *args, uint32_t argCount, NPVariant *result);
@@ -38,9 +37,9 @@
   public:
 
 	  static NPObject* Allocate(NPP npp, NPClass *aClass) {
-		  DBGLOG(LOG_INFO, "NPBrowser::Allocate");
 		  return (NPObject *)new NPBrowser(npp);
 	  }
+	  void Deallocate(void);
 
 	  static NPClass _npclass;
 

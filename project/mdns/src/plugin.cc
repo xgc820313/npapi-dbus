@@ -33,10 +33,10 @@ namespace
     {
          public:
               dynamic_library_load_unload_handler(){
-                    DBGLOG(LOG_INFO, "loaded!");
+                    //DBGLOG(LOG_INFO, "loaded!");
               }
               ~dynamic_library_load_unload_handler(){
-                    // Code to execute when the library is unloaded
+                    //DBGLOG(LOG_INFO, "unloaded!");
               }
     } dynamic_library_load_unload_handler_hook;
 }
@@ -58,16 +58,15 @@ fillPluginFunctionTable(NPPluginFuncs* pFuncs)
   pFuncs->event         = NULL; //NPP_HandleEvent;
   pFuncs->urlnotify     = NULL; //NPP_URLNotify;
   pFuncs->getvalue      = NPP_GetValue;
-  pFuncs->setvalue      = NPP_SetValue;
+  pFuncs->setvalue      = NULL; //NPP_SetValue;
 }
 
 
 NP_EXPORT(NPError)
 NP_Initialize(NPNetscapeFuncs* bFuncs, NPPluginFuncs* pFuncs) {
-	DBGLOG(LOG_INFO, "NP_Initialize");
+	//DBGLOG(LOG_INFO, "NP_Initialize");
 
 	sBrowserFuncs = bFuncs;
-
 	fillPluginFunctionTable(pFuncs);
 
 	return NPERR_NO_ERROR;
@@ -101,8 +100,7 @@ NP_GetValue(void* future, NPPVariable aVariable, void* aValue) {
 
 NP_EXPORT(NPError)
 NP_Shutdown() {
-	DBGLOG(LOG_INFO, "NP_Shutdown");
-
+	//DBGLOG(LOG_INFO, "NP_Shutdown");
 	return NPERR_NO_ERROR;
 }
 
@@ -112,7 +110,7 @@ NP_Shutdown() {
 NPError
 NPP_New(NPMIMEType pluginType, NPP instance, uint16_t mode, int16_t argc, char* argn[], char* argv[], NPSavedData* saved) {
 
-	DBGLOG(LOG_INFO, "NPP_New");
+	//DBGLOG(LOG_INFO, "NPP_New");
 
 	sBrowserFuncs->setvalue(instance, NPPVpluginWindowBool, (void*)false);
 
@@ -129,17 +127,19 @@ NPP_New(NPMIMEType pluginType, NPP instance, uint16_t mode, int16_t argc, char* 
 	instanceData->npo=NULL;
 	instanceData->sBrowserFuncs = sBrowserFuncs;
 
-	DBGLOG(LOG_INFO, "NPP_New - end");
+	//DBGLOG(LOG_INFO, "NPP_New - end");
 
 	return NPERR_NO_ERROR;
 }
 
 NPError
 NPP_Destroy(NPP instance, NPSavedData** save) {
-  InstanceData* instanceData = (InstanceData*)(instance->pdata);
 
-  // @TODO
-  DBGLOG(LOG_INFO, "NPP_Destroy");
+  InstanceData *instanceData = (InstanceData*)(instance->pdata);
+  if (NULL!=instanceData->npo) {
+	  ((NPBrowser *)instanceData->npo)->Deallocate();
+	  delete instanceData->npo;
+  }
 
   free(instanceData);
   return NPERR_NO_ERROR;
@@ -148,7 +148,7 @@ NPP_Destroy(NPP instance, NPSavedData** save) {
 NPError
 NPP_GetValue(NPP instance, NPPVariable variable, void *value) {
 
-	DBGLOG(LOG_INFO, "NPP_GetValue, variable: %i", variable);
+	//DBGLOG(LOG_INFO, "NPP_GetValue, variable: %i", variable);
 
 	InstanceData *instanceData = (InstanceData*)(instance->pdata);
 
@@ -164,22 +164,19 @@ NPP_GetValue(NPP instance, NPPVariable variable, void *value) {
 		if (NULL!=instanceData->npo) {
 		  *(NPObject **)value = instanceData->npo;
 		} else {
-			DBGLOG(LOG_INFO, " BEFORE NPN_CreateObject");
 			instanceData->npo = (*sBrowserFuncs->createobject)(instance, &NPBrowser::_npclass);
 			*(NPObject **)value = instanceData->npo;
-			DBGLOG(LOG_INFO, " AFTER NPN_CreateObject");
 		}
 		break;
 	default:
 		rv = NPERR_GENERIC_ERROR;
 	}
-
-	DBGLOG(LOG_INFO, "NPP_GetValue - end");
 	return rv;
 }
 
+/*
 NPError
 NPP_SetValue(NPP instance, NPNVariable variable, void *value) {
   return NPERR_GENERIC_ERROR;
 }
-
+*/

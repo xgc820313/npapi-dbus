@@ -9,8 +9,16 @@
 	  var embed = document.embeds[0];
 	  //console.log( embed );
 	  
-	  var msg = embed.popmsg();
-	  alert(msg);
+	  var msg;
+		var i;
+	  
+	  for (i=0; i<1000; i++) {
+	  	msg = embed.popmsg();
+	  	if (null!=msg) {
+		  	console.log(msg);
+	  	}
+	  }
+	  
 	  
 	</script>
 	
