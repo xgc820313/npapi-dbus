@@ -11,6 +11,8 @@
 
 int main(int argc, char *argv[]) {
 
+	//DBGLOG(LOG_INFO, "npapi-mdns: test start");
+
 	CommChannel *cc=(CommChannel *) malloc(sizeof(CommChannel));
 	queue *q;
 	BMsg *msg;

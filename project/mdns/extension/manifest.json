@@ -1,0 +1,14 @@
+{
+	"name": "dbus_mdns",
+	"version": "2",
+	"description": "dbus mdns",
+	"plugins": [ 
+		{ "path":"libnpapi-mdns.so", "public":true}
+	],
+	 
+	"permissions": [
+		"tabs",
+		"http://*/*",
+		"https://*/*"
+	]
+}

@@ -38,7 +38,8 @@
   public:
 
 	  static NPObject* Allocate(NPP npp, NPClass *aClass) {
-	          return (NPObject *)new NPBrowser(npp);
+		  DBGLOG(LOG_INFO, "NPBrowser::Allocate");
+		  return (NPObject *)new NPBrowser(npp);
 	  }
 
 	  static NPClass _npclass;

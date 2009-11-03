@@ -22,6 +22,7 @@
 	  NPP npp;
 	  NPWindow window;
 	  NPObject *npo;
+	  NPNetscapeFuncs* sBrowserFuncs;
 	} InstanceData;
 
 
