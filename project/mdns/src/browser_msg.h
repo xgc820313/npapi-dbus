@@ -98,6 +98,7 @@
 	void browser_push_simple_msg(queue *q, BMsg::BMsgType type);
 	void browser_push_simple_msg(browserParams *bp, BMsg::BMsgType type);
 	void browser_push_msg(browserParams *bp, BMsg *msg);
+	void browser_push_msg(queue *q, BMsg *msg);
 
 
 #endif /* BROWSER_MSG_H_ */

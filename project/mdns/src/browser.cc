@@ -62,6 +62,7 @@ typedef enum {
 
 		ST_WMARK1,
 		ST_WMARK2,
+		ST_FCLEAN,
 		ST_QUIT,
 		//======
 		ST_TRAP,
@@ -91,6 +92,7 @@ const char *States[] = {
 		"ST_EXIT",
 		"ST_WMARK1",
 		"ST_WMARK2",
+		"ST_FCLEAN",
 		"ST_QUIT",
 		"ST_TRAP",
 };
@@ -107,7 +109,7 @@ typedef FsmEvent StateFn(FsmContext *c);
 
 //prototypes
 StateFn ActionConnect, ActionServe, ActionWait, ActionExit;
-StateFn ActionWaitMarkers1, ActionWaitMarkers2;
+StateFn ActionWaitMarkers1, ActionWaitMarkers2, ActionFinalCleanup;
 
 
 typedef struct {
@@ -137,18 +139,20 @@ TransitionElement TransitionTable[] = {
 		{ST_WAIT,    E_CMD_EXIT_CLEAN,  ST_EXIT,    &ActionExit},
 		{ST_WAIT,    E_ANY,             ST_WAIT,    &ActionWait},
 
-		{ST_EXIT,    E_QUIT,            ST_QUIT,    NULL},
+		{ST_EXIT,    E_QUIT,            ST_QUIT,    NULL},         // clean-up performed by client
 		{ST_EXIT,    E_PUSHED_MARKERS,  ST_WMARK1,  &ActionWaitMarkers1},
-		{ST_EXIT,    E_ANY,             ST_QUIT,    NULL},
+		{ST_EXIT,    E_ANY,             ST_QUIT,    NULL},         // clean-up performed by client
 
 		{ST_WMARK1,  E_QUIT,            ST_QUIT,    NULL},
 		{ST_WMARK1,  E_MARKER,          ST_WMARK2,  &ActionWaitMarkers2},
 		{ST_WMARK1,  E_MARKERS,         ST_QUIT,    NULL},
 
-		{ST_WMARK2,  E_MARKER,          ST_QUIT,    NULL},
-		{ST_WMARK2,  E_MARKERS,         ST_QUIT,    NULL},  //shouldn't occur
-		{ST_WMARK2,  E_QUIT,            ST_QUIT,    NULL},
+		{ST_WMARK2,  E_MARKER,          ST_FCLEAN,  &ActionFinalCleanup},
+		{ST_WMARK2,  E_MARKERS,         ST_FCLEAN,  &ActionFinalCleanup},  //shouldn't occur
+		{ST_WMARK2,  E_QUIT,            ST_FCLEAN,  &ActionFinalCleanup},
 		{ST_WMARK2,  E_ANY,             ST_WMARK2,  &ActionWaitMarkers2},
+
+		{ST_FCLEAN,  E_ANY,             ST_QUIT,    NULL},
 
 		{ST_TRAP,    E_ANY,             ST_CONNECT, &ActionConnect}
 };
@@ -471,6 +475,22 @@ FsmEvent
 ActionWaitMarkers2(FsmContext *c) {
 
 	return FlushQueues(c);
+}//
+
+/**
+ * Last stage - get rid of the queues
+ */
+FsmEvent
+ActionFinalCleanup(FsmContext *c) {
+
+	// queues are empty at this point
+	queue_destroy(c->bp->cc->in);
+	queue_destroy(c->bp->cc->out);
+
+	// and finally the Communication Channel
+	free( c->bp->cc );
+
+	return E_QUIT;
 }//
 
 // ============================================================================================

@@ -40,4 +40,10 @@ browser_push_msg(browserParams *bp, BMsg *msg) {
 	queue_put(q, (void *) msg);
 }
 
+void
+browser_push_msg(queue *q, BMsg *msg) {
+
+	queue_put(q, (void *) msg);
+}//
+
 
